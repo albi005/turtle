@@ -12,6 +12,17 @@
 --   redstone.setOutput("right", false)
 -- end
 
+local function dbg(value)
+  local pretty = require "cc.pretty"
+  print(pretty.pretty(value))
+  return value
+end
+
+local function panic(message)
+  print(message)
+  error(message)
+end
+
 local Vec = {}
 local vecMemo = setmetatable({}, { __mode = "v" })
 function Vec:new(vec)
@@ -151,9 +162,6 @@ end
 moves.down.inv = moves.up
 
 local function goTo(target)
-  local pretty = require "cc.pretty"
-  print(pretty.pretty({}))
-
   target = Vec:new(target)
   local nextMove = {}
   local queue = Queue:new()
@@ -184,16 +192,32 @@ local function goTo(target)
   end
 end
 
-local function home() goTo({ 0, 0, 0 }) end
+local function home()
+  goTo({ 0, 0, 0 })
+  turnToRot(0)
+end
 
--- main
 t.air[t.pos] = true
-moves.fw.execute()
-moves.fw.execute()
-moves.fw.execute()
-moves.left.execute()
-moves.left.execute()
-moves.left.execute()
-moves.bw.execute()
+
+local function main()
+  moves.fw.execute()
+  moves.right.execute()
+  moves.fw.execute()
+  moves.fw.execute()
+  assert(1 == 2)
+  moves.fw.execute()
+  moves.fw.execute()
+  turtle.placeDown()
+  moves.fw.execute()
+  turtle.placeDown()
+  moves.fw.execute()
+  turtle.placeDown()
+  moves.fw.execute()
+  turtle.placeDown()
+end
+
+local suc, ret = pcall(main)
+if not suc then
+  print(ret)
+end
 home()
-turnToRot(0)
