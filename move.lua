@@ -1,65 +1,11 @@
-local Vec = {}
-local vecMemo = setmetatable({}, { __mode = "v" })
-function Vec:new(vec)
-    local key = vec[1] .. "," .. vec[2] .. "," .. vec[3]
-    if vecMemo[key] then
-        return vecMemo[key]
-    end
-    local res = { vec[1], vec[2], vec[3] }
-    setmetatable(res, self)
-    vecMemo[key] = res
-    return res
-end
+require'vector'
+require'queue'
 
-function Vec:tostring()
-    return self[1] .. "," .. self[2] .. "," .. self[3]
-end
-
-function Vec:__add(other)
-    return Vec:new({ self[1] + other[1], self[2] + other[2], self[3] + other[3] })
-end
-
-function Vec:__sub(other)
-    return Vec:new({ self[1] - other[1], self[2] - other[2], self[3] - other[3] })
-end
-
-function Vec:__eq(other)
-    return self[1] == other[1] and self[2] == other[2] and self[3] == other[3]
-end
-
-local Queue = {}
-function Queue:new()
-    local res = { first = 0, last = -1 }
-    setmetatable(res, self)
-    self.__index = self
-    return res
-end
-
-function Queue:push(value)
-    local last = self.last + 1
-    self.last = last
-    self[last] = value
-end
-
-function Queue:pop()
-    local first = self.first
-    if first > self.last then
-        return nil
-    end
-    local value = self[first]
-    self[first] = nil
-    self.first = first + 1
-    return value
-end
-
-function Queue:empty()
-    return self.first > self.last
-end
-
+-- current turtle state
 local t = {}
-t.pos = Vec:new { 0, 0, 0 }
+t.pos = Vec:new{ 0, 0, 0 }
 t.rot = 0
-t.air = {}
+t.air = {} -- known air blocks
 
 local moves = {
     fw = { 1, 0, 0, rot = 0 },
@@ -86,7 +32,7 @@ local function turnToRot(rot)
         turtle.turnRight()
         t.rot = t.rot + 2
     else
-        error("invalid rotation")
+        error'invalid rotation'
     end
     t.rot = t.rot % 4
 end
@@ -162,7 +108,7 @@ local function goTo(target)
     while current ~= target do
         local move = nextMove[current]
         if not move.execute() then
-            print("failed to move")
+            print'failed to move'
             return
         end
         current = current + move
@@ -170,7 +116,7 @@ local function goTo(target)
 end
 
 local function home()
-    goTo({ 0, 0, 0 })
+    goTo{ 0, 0, 0 }
     turnToRot(0)
 end
 
