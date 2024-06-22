@@ -1,20 +1,53 @@
-require'vector'
 require'queue'
+require'vector'
+require'world'
 
 -- current turtle state
 local t = {}
-t.pos = Vec:new{ 0, 0, 0 }
+t.pos = Vec.new{0, 0, 0}
 t.rot = 0
-t.air = {} -- known air blocks
 
 local moves = {
-    fw = { 1, 0, 0, rot = 0 },
-    right = { 0, 0, 1, rot = 1 },
-    bw = { -1, 0, 0, rot = 2 },
-    left = { 0, 0, -1, rot = 3 },
-    up = { 0, 1, 0 },
-    down = { 0, -1, 0 },
+    east = {1, 0, 0, rot = 0},
+    south = {0, 0, 1, rot = 1},
+    west = {-1, 0, 0, rot = 2},
+    north = {0, 0, -1, rot = 3},
+    up = {0, 1, 0},
+    down = {0, -1, 0},
 }
+
+local rotToMove = {
+    [0] = moves.east,
+    [1] = moves.south,
+    [2] = moves.west,
+    [3] = moves.north,
+}
+
+local function getBlockType(has_block, data)
+    if not has_block then
+        return BlockTypes.empty
+    end
+    if data.name == 'minecraft:lava' then
+        if data.state.level == 0 then
+            return BlockTypes.lava
+        else
+            return BlockTypes.empty
+        end
+    end
+    return BlockTypes.solid
+end
+
+local function updateWorldForward()
+    World[t.pos + rotToMove[t.rot]] = getBlockType(turtle.inspect())
+end
+
+local function updateWorldUp()
+    World[t.pos + moves.up] = getBlockType(turtle.inspectUp())
+end
+
+local function updateWorldDown()
+    World[t.pos + moves.down] = getBlockType(turtle.inspectDown())
+end
 
 local function turnToRot(rot)
     local diff = rot - t.rot
@@ -29,12 +62,24 @@ local function turnToRot(rot)
         t.rot = t.rot - 1
     elseif diff == 2 or diff == -2 then
         turtle.turnRight()
+        t.rot = t.rot + 1
+        t.rot = t.rot % 4
+        updateWorldForward()
+
         turtle.turnRight()
-        t.rot = t.rot + 2
+        t.rot = t.rot + 1
     else
         error'invalid rotation'
     end
     t.rot = t.rot % 4
+    updateWorldForward()
+end
+
+local function updateWorld()
+    World[t.pos] = BlockTypes.empty
+    updateWorldUp()
+    updateWorldDown()
+    updateWorldForward()
 end
 
 local function executeHorizontalMove(move)
@@ -43,49 +88,74 @@ local function executeHorizontalMove(move)
             turnToRot(move.rot)
             turtle.dig()
             if not turtle.forward() then
-                t.air[t.pos + move] = nil
+                World[t.pos + move] = BlockTypes.barrier
                 return false
             end
         end
         t.pos = t.pos + move
-        t.air[t.pos] = true
+        updateWorld()
         return true
     end
 end
 
-moves.fw.execute = executeHorizontalMove(moves.fw)
-moves.fw.inv = moves.bw
-moves.right.execute = executeHorizontalMove(moves.right)
-moves.right.inv = moves.left
-moves.bw.execute = executeHorizontalMove(moves.bw)
-moves.bw.inv = moves.fw
-moves.left.execute = executeHorizontalMove(moves.left)
-moves.left.inv = moves.right
+local function placeHorizontal(move)
+    return function()
+        turnToRot(move.rot)
+        turtle.place()
+        updateWorldForward()
+    end
+end
+
+moves.east.execute = executeHorizontalMove(moves.east)
+moves.east.place = placeHorizontal(moves.east)
+moves.east.inv = moves.west
+
+moves.south.execute = executeHorizontalMove(moves.south)
+moves.south.place = placeHorizontal(moves.south)
+moves.south.inv = moves.north
+
+moves.west.execute = executeHorizontalMove(moves.west)
+moves.west.place = placeHorizontal(moves.west)
+moves.west.inv = moves.east
+
+moves.north.execute = executeHorizontalMove(moves.north)
+moves.north.place = placeHorizontal(moves.north)
+moves.north.inv = moves.south
+
 moves.up.execute = function()
     turtle.digUp()
     if not turtle.up() then
-        t.air[t.pos + moves.up] = nil
+        World[t.pos + moves.up] = BlockTypes.barrier
         return false
     end
     t.pos = t.pos + moves.up
-    t.air[t.pos] = true
+    updateWorld()
     return true
 end
+moves.up.place = function()
+    turtle.placeUp()
+    updateWorldUp()
+end
 moves.up.inv = moves.down
+
 moves.down.execute = function()
     turtle.digDown()
     if not turtle.down() then
-        t.air[t.pos + moves.down] = nil
+        World[t.pos + moves.down] = BlockTypes.barrier
         return false
     end
     t.pos = t.pos + moves.down
-    t.air[t.pos] = true
+    updateWorld()
     return true
+end
+moves.down.place = function()
+    turtle.placeDown()
+    updateWorldDown()
 end
 moves.down.inv = moves.up
 
 local function goTo(target)
-    target = Vec:new(target)
+    target = Vec.new(target)
     local nextMove = {}
     local queue = Queue:new()
     queue:push(target)
@@ -94,7 +164,7 @@ local function goTo(target)
 
         for _, move in pairs(moves) do
             local next = current + move
-            if t.air[next] and not nextMove[next] then
+            if World[next] == BlockTypes.empty and not nextMove[next] then
                 queue:push(next)
                 nextMove[next] = move.inv
                 if next == t.pos then
@@ -105,30 +175,37 @@ local function goTo(target)
     end
 
     local current = t.pos
+
+    Dbg(current)
+    Dbg(target)
+    if current == target then return end
+
+    assert(nextMove[current], 'no path to target')
+
     while current ~= target do
         local move = nextMove[current]
-        if not move.execute() then
-            print'failed to move'
-            return
-        end
+        assert(move.execute(), 'failed to move')
         current = current + move
     end
 end
 
 local function home()
-    goTo{ 0, 0, 0 }
+    goTo{0, 0, 0}
     turnToRot(0)
 end
 
-t.air[t.pos] = true
+updateWorld()
 
 return {
     goTo = goTo,
     home = home,
-    fw = moves.fw.execute,
-    right = moves.right.execute,
-    bw = moves.bw.execute,
-    left = moves.left.execute,
+    east = moves.east.execute,
+    south = moves.south.execute,
+    west = moves.west.execute,
+    north = moves.north.execute,
     up = moves.up.execute,
     down = moves.down.execute,
+    turnToRot = turnToRot,
+    moves = moves,
+    getPos = function() return t.pos end,
 }

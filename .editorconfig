@@ -9,3 +9,4 @@ call_arg_parentheses = remove
 space_before_function_open_parenthesis = false
 space_before_function_call_open_parenthesis = false
 space_before_function_call_single_arg = false
+space_around_table_field_list = false

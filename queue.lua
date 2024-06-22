@@ -1,10 +1,10 @@
 Queue = {}
+Queue.__index = Queue
 
-function Queue:new()
-    local res = { first = 0, last = -1 }
-    setmetatable(res, self)
-    self.__index = self
-    return res
+function Queue.new()
+    local instance = {first = 0, last = -1}
+    setmetatable(instance, Queue)
+    return instance
 end
 
 function Queue:push(value)
