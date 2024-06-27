@@ -7,7 +7,7 @@ end
 function Try(f)
     local ok, err = xpcall(f, debug.traceback)
     if not ok then
-        print(err)
+        print("Error:", err)
     end
 end
 
@@ -19,7 +19,7 @@ local mine = require'mine'
 World.load()
 -- wget run https://turtle.alb1.hu
 local function main()
-    mine.run()
+    require'ws'
 end
 
 Try(main)

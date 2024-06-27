@@ -34,7 +34,6 @@ end
 local function mine()
     repeat
         local pos = move.getPos()
-        Dbg(pos)
         local nextMove = getNextMove(pos[1], pos[3])
         move.turnToRot(nextMove.rot)
         check(turtle.inspect, turtle.dig)
@@ -73,7 +72,7 @@ local function main()
 end
 
 local function main2()
-    for i = 1, 4 do
+    for i = 1, 1 do
         main()
     end
 end

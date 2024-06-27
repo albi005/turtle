@@ -1,0 +1,39 @@
+﻿@page "/turtles"
+@using System.Net.WebSockets
+@using System.Text
+@inject TurtleService TurtleService
+@rendermode InteractiveServer
+
+<PageTitle>Hivemind</PageTitle>
+
+<h2>Turtles</h2>
+@foreach (var turtle in TurtleService.Turtles)
+{
+    <p>@turtle.Name</p>
+    <MudButton OnClick="@(() => Message(turtle.WebSocket, "Go"))" Variant="@Variant.Filled" Color="@Color.Tertiary">
+        Go
+    </MudButton>
+    <MudButton OnClick="@(() => Message(turtle.WebSocket, "Stop"))" Variant="@Variant.Filled" Color="@Color.Tertiary">
+        Stop
+    </MudButton>
+}
+
+@code {
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        TurtleService.Turtles.CollectionChanged += (_, _) => { InvokeAsync(StateHasChanged); };
+    }
+
+    async Task Message(WebSocket ws, string msg)
+    {
+        await ws.SendAsync(
+            Encoding.UTF8.GetBytes(msg),
+            WebSocketMessageType.Text,
+            true,
+            new()
+        );
+    }
+
+}

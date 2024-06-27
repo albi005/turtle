@@ -176,8 +176,6 @@ local function goTo(target)
 
     local current = t.pos
 
-    Dbg(current)
-    Dbg(target)
     if current == target then return end
 
     assert(nextMove[current], 'no path to target')
