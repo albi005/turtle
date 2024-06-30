@@ -8,7 +8,11 @@ local tasks = {
     standBy = {
         run = function() coroutine.yield(task.events.websocket_message) end,
         stop = function() end
-    }
+    },
+    left = {run = function() coroutine.wrap(turtle.turnLeft)() end},
+    up = {run = function() coroutine.wrap(turtle.up)() end},
+    down = {run = function() coroutine.wrap(turtle.down)() end},
+    right = {run = function() coroutine.wrap(turtle.turnRight)() end},
 }
 
 local storedState = textutils.unserialise(file.read'task.txt' or '{}')

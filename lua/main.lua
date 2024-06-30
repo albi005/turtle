@@ -7,6 +7,7 @@ local task = require'task'
 local worldId = file.read'worldId.txt'
 local dimensionId = dimension.getId()
 local turtleId = os.getComputerID()
+os.setComputerLabel(tostring(turtleId))
 local position = vector.new(gps.locate())
 local rotation = rotationHelper.getRotation(position)
 
@@ -20,7 +21,7 @@ print('rotation', rotation)
 
 local taskRunCoroutine = coroutine.create(task.run)
 while true do
-    local nextTaskId = hivemind.getTask()
+    local nextTaskId = hivemind.getTask(0)
     if nextTaskId then task.update(nextTaskId) end
     local _, waitFor = coroutine.resume(taskRunCoroutine)
 

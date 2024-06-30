@@ -4,7 +4,7 @@ wget run https://t.alb1.hu en9
 
 local function install(name)
     fs.delete(name .. '.lua')
-    shell.run('wget https://t.alb1.hu/' .. name .. '.lua')
+    assert(shell.run('wget https://t.alb1.hu/' .. name .. '.lua'))
 end
 
 local function writeAll(fileName, text)
