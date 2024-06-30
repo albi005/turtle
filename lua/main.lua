@@ -1,28 +1,49 @@
-function Dbg(value)
-    local pretty = require'cc.pretty'
-    print(pretty.pretty(value))
-    return value
-end
+local dimension = require'dimension'
+local hivemind = require'hivemind'
+local file = require'file'
+local rotationHelper = require'rotationHelper'
+local task = require'task'
 
-function Try(f)
-    local ok, err = xpcall(f, debug.traceback)
-    if not ok then
-        print("Error:", err)
+local worldId = file.read'worldId.txt'
+local dimensionId = dimension.getId()
+local turtleId = os.getComputerID()
+local position = vector.new(gps.locate())
+local rotation = rotationHelper.getRotation(position)
+
+hivemind.init(turtleId, worldId, dimensionId)
+
+print('worldId', worldId)
+print('dimensionId', dimensionId)
+print('turtleId', turtleId)
+print('position', position)
+print('rotation', rotation)
+
+local taskRunCoroutine = coroutine.create(task.run)
+while true do
+    local nextTaskId = hivemind.getTask()
+    if nextTaskId then task.update(nextTaskId) end
+    local _, waitFor = coroutine.resume(taskRunCoroutine)
+
+    if waitFor then
+        local events = {}
+        if type(waitFor) == 'string' then
+            events[waitFor] = true
+        else
+            for _, eventName in ipairs(waitFor) do
+                events[eventName] = true
+            end
+        end
+        events[task.events.websocket_message] = true
+        while true do
+            local event = {os.pullEvent()}
+            local eventName = event[1]
+            if events[eventName] then
+                if event[1] == task.events.websocket_message then
+                    nextTaskId = event[3]
+                    if nextTaskId then task.update(nextTaskId) end
+                end
+                break
+            end
+        end
     end
 end
-
-require'world'
-local move = require'move'
-local lava = require'lava'
-local mine = require'mine'
-
-World.load()
--- wget run https://turtle.alb1.hu
-local function main()
-    require'ws'
-end
-
-Try(main)
-
-move.home()
-World.save()

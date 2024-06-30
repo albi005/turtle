@@ -63,6 +63,7 @@ local function getNextUnknown()
 end
 
 local function run()
+    Inventory.dropAll()
     Inventory.pickUp()
 
     move.east()

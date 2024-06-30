@@ -1,7 +1,9 @@
 using System.Net.WebSockets;
 using Hivemind;
 using Hivemind.Components;
+using Hivemind.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
 
@@ -12,6 +14,11 @@ builder.Services.AddRazorComponents()
 builder.Services.AddMudServices();
 builder.Services.AddControllers();
 builder.Services.AddSingleton<TurtleService>();
+builder.Services.AddDbContextFactory<Db>();
+builder.Services.AddScoped(p => p
+    .GetRequiredService<IDbContextFactory<Db>>()
+    .CreateDbContext());
+
 
 var app = builder.Build();
 
@@ -58,26 +65,25 @@ public class MyController : Controller
     [HttpGet("/")]
     public PhysicalFileResult Get()
     {
-        return PhysicalFile("/home/albi/src/turtle/lua/install.lua", "text/plain");
+        return PhysicalFile("/home/albi/src/turtle/lua/startup.lua", "text/plain");
     }
 }
 
 public class WebSocketController(TurtleService turtleService) : ControllerBase
 {
     [Route("/ws")]
-    public async Task Get([FromQuery] string label)
+    public async Task Get([FromQuery] uint turtleId, [FromQuery] string worldId, [FromQuery] byte dimensionId)
     {
         if (HttpContext.WebSockets.IsWebSocketRequest)
         {
             using WebSocket webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
             TaskCompletionSource tcs = new();
-            Turtle turtle = new(label, webSocket, tcs);
-            turtleService.Turtles.Add(turtle);
+            turtleService.Register(worldId, dimensionId, turtleId, webSocket, tcs);
             await tcs.Task;
         }
         else
         {
-            HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+            HttpContext.Response.StatusCode = StatusCodes.Status418ImATeapot;
         }
     }
 }

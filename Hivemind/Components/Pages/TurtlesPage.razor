@@ -1,0 +1,51 @@
+﻿@page "/turtles"
+@using System.Net.WebSockets
+@using System.Text
+@inject TurtleService TurtleService
+@rendermode InteractiveServer
+
+<PageTitle>Hivemind</PageTitle>
+
+<h1>Turtles</h1>
+
+@foreach (var world in TurtleService.Worlds.Values)
+{
+    @foreach (var turtle in world.Turtles.Values)
+    {
+        <p>
+            <b>
+                Turtle @turtle.Id @(" ")
+            </b>
+            @if (turtle.Position.HasValue)
+            {
+                var pos = turtle.Position.Value;
+                <span>@pos.X, @pos.Y, @pos.Z</span>
+            }
+            @turtle.Dimension?.Name
+            <MudButtonGroup Color="Color.Dark" Variant="Variant.Filled" Class="ma-2">
+                <MudButton OnClick="@(() => turtle.Connection?.SendAsync("left")!)">
+                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowLeft"></MudIcon>
+                </MudButton>
+                <MudButton OnClick="@(() => turtle.Connection?.SendAsync("up")!)">
+                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowUp"></MudIcon>
+                </MudButton>
+                <MudButton OnClick="@(() => turtle.Connection?.SendAsync("down")!)">
+                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"></MudIcon>
+                </MudButton>
+                <MudButton OnClick="@(() => turtle.Connection?.SendAsync("right")!)">
+                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowRight"></MudIcon>
+                </MudButton>
+            </MudButtonGroup>
+        </p>
+    }
+}
+
+@code {
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        TurtleService.OnChanged += () => InvokeAsync(StateHasChanged);
+    }
+
+}
