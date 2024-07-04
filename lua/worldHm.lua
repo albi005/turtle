@@ -17,8 +17,8 @@ function world.update(coordinates, hasBlock, data)
     local lastUpdate = os.epoch'utc'
     local id = getId(hasBlock, data)
 
-    local f = fs.open('world.txt', 'a')
-    f.write(textutils.serialize{coordinates, id, lastUpdate})
+    local f = fs.open('worldUpdateQueue.txt', 'a')
+    f.write(textutils.serialize({coordinates, id, lastUpdate}, {compact = true}) .. '\n')
     f.close()
 
     store:set(coordinates, {id, lastUpdate})
@@ -27,7 +27,7 @@ end
 function world.upload()
     local updates = {}
     store:forEach(function(coordinates, data)
-        table.insert(updates, {coordinates = coordinates, id = data[1], lastUpdate = data[2]})
+        table.insert(updates, {coordinates = {x = coordinates[1], y = coordinates[2], z = coordinates[3]}, id = data[1], lastUpdate = data[2]})
     end)
 
     hivemind.updateWorld(updates)
@@ -35,8 +35,8 @@ function world.upload()
 end
 
 do
-    if fs.exists'world.txt' then
-        local f = fs.open('world.txt', 'r')
+    if fs.exists'worldUpdateQueue.txt' then
+        local f = fs.open('worldUpdateQueue.txt', 'r')
         for line in f.readLine do
             local data = textutils.unserialize(line)
             store:set(data[1], {data[2], data[3]})

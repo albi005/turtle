@@ -12,8 +12,12 @@ function hivemind.getTask(timeout)
     return message
 end
 
-local function send(message)
-    local message = textutils.serializeJSON(message)
+local function send(type, data)
+    local message = {
+        type = type,
+        data = data
+    }
+    message = textutils.serializeJSON(message)
     print('sending message:', message)
     ws.send(message)
 end
@@ -29,14 +33,10 @@ end
 
 ---@param updates {coordinates: {x: integer, y: integer, z: integer}, id: string, lastUpdate: integer}[]
 function hivemind.updateWorld(updates)
-    local message = {
-        type = 'updateWorld',
-        updates = updates
-    }
     if #updates == 0 then
-        message.updates = textutils.empty_json_array
+        updates = textutils.empty_json_array
     end
-    send(message)
+    send('updateWorld', updates)
 end
 
 return hivemind

@@ -7,18 +7,25 @@ public class TurtleMessageHandler(TurtleService turtleService)
 {
     public Turtle Turtle { private get; set; } = null!;
 
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     public async Task Handle(Stream message)
     {
         message.Seek(0, SeekOrigin.Begin);
-        var json = JsonSerializer.Deserialize<JsonObject>(message);
+        var json = JsonSerializer.Deserialize<JsonObject>(message, JsonOptions);
         string type = json!["type"]!.AsValue().GetValue<string>();
+        JsonNode data = json["data"]!;
+        await Handle(type, data);
+    }
+
+    public async Task Handle(string type, JsonNode data)
+    {
         switch (type)
         {
             case "updateWorld":
-                await UpdateWorld(json["updates"].Deserialize<List<WorldUpdate>>()!);
+                await UpdateWorld(data.Deserialize<List<WorldUpdate>>(JsonOptions)!);
                 return;
         }
-
         throw new NotSupportedException("Unknown message type " + type);
     }
 
