@@ -18,7 +18,7 @@ public class TurtleMessageHandler(TurtleService turtleService)
         await Handle(type, data);
     }
 
-    public async Task Handle(string type, JsonNode data)
+    private async Task Handle(string type, JsonNode data)
     {
         switch (type)
         {

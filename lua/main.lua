@@ -6,6 +6,7 @@ local ok, err = xpcall(function()
     local task = require'task'
     local world = require'worldHm'
     local Vec = require'vec'
+    local move = require'moveGps'
 
     local worldId = file.read'worldId.txt'
     local dimensionId = dimension.getId()
@@ -15,6 +16,7 @@ local ok, err = xpcall(function()
     local rotation = rotationHelper.getRotation(position)
 
     hivemind.init(turtleId, worldId, dimensionId)
+    move.init(position, rotation)
 
     print('worldId', worldId)
     print('dimensionId', dimensionId)
@@ -22,7 +24,6 @@ local ok, err = xpcall(function()
     print('position', position)
     print('rotation', rotation)
 
-    world.update(position, false)
     world.upload()
 
     local taskRunCoroutine = coroutine.create(task.run)

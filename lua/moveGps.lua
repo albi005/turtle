@@ -1,47 +1,149 @@
-local move = {}
+local world = require'worldHm'
 
--- public record Move(string Id, Vec Delta)
--- {
---     public Move Inverse { get; set; } = null!;
+local M = {}
 
---     public static Move East { get; } = new("east", new(1, 0, 0));
---     public static Move South { get; } = new("south", new(0, 0, 1));
---     public static Move West { get; } = new("west", new(-1, 0, 0));
---     public static Move North { get; } = new("north", new(0, 0, -1));
---     public static Move Up { get; } = new("up", new(0, 1, 0));
---     public static Move Down { get; } = new("down", new(0, -1, 0));
---     public static IReadOnlyList<Move> All { get; } = [East, South, West, North, Up, Down];
+M.position = {0, 0, 0} -- current turtle position
+M.rotation = 0         -- current turtle rotation
 
---     static Move()
---     {
---         East.Inverse = West;
---         South.Inverse = North;
---         West.Inverse = East;
---         North.Inverse = South;
---         Up.Inverse = Down;
---         Down.Inverse = Up;
---     }
--- }
+M.east = {1, 0, 0}
+M.south = {0, 0, 1}
+M.west = {-1, 0, 0}
+M.north = {0, 0, -1}
+M.up = {0, 1, 0}
+M.down = {0, -1, 0}
 
-move.east = { 1, 0, 0 }
-move.south = { 0, 0, 1 }
-move.west = { -1, 0, 0 }
-move.north = { 0, 0, -1 }
-move.up = { 0, 1, 0 }
-move.down = { 0, -1, 0 }
+M.east.inv = M.west
+M.south.inv = M.north
+M.west.inv = M.east
+M.north.inv = M.south
+M.up.inv = M.down
+M.down.inv = M.up
 
-move.east.inv = move.west
-move.south.inv = move.north
-move.west.inv = move.east
-move.north.inv = move.south
-move.up.inv = move.down
-move.down.inv = move.up
+M.east.rot = 0
+M.south.rot = 1
+M.west.rot = 2
+M.north.rot = 3
 
-move.rotToMove = {
-    [0] = move.east,
-    [1] = move.south,
-    [2] = move.west,
-    [3] = move.north,
+M.rotToMove = {
+    [0] = M.east,
+    [1] = M.south,
+    [2] = M.west,
+    [3] = M.north,
 }
 
-return move
+local function updateWorldForward()
+    world.update(M.position + M.rotToMove[M.rotation], turtle.inspect())
+end
+local function updateWorldUp()
+    world.update(M.position + M.up, turtle.inspectUp())
+end
+local function updateWorldDown()
+    world.update(M.position + M.down, turtle.inspectDown())
+end
+local function updateWorldAtPosition()
+    world.update(M.position, false)
+end
+local function updateWorldAfterHorizontalMove()
+    updateWorldAtPosition()
+    updateWorldUp()
+    updateWorldDown()
+end
+
+local function turnToRot(rot)
+    local diff = rot - M.rotation
+    if diff == 0 then
+        return
+    end
+    if diff == 1 or diff == -3 then
+        turtle.turnRight()
+        M.rotation = M.rotation + 1
+    elseif diff == -1 or diff == 3 then
+        turtle.turnLeft()
+        M.rotation = M.rotation - 1
+    elseif diff == 2 or diff == -2 then
+        turtle.turnRight()
+        M.rotation = M.rotation + 1
+        M.rotation = M.rotation % 4
+        updateWorldForward()
+
+        turtle.turnRight()
+        M.rotation = M.rotation + 1
+    else
+        error'invalid rotation'
+    end
+    M.rotation = M.rotation % 4
+    updateWorldForward()
+end
+
+local function executeHorizontalMove(move)
+    return function()
+        if math.abs(move.rot - M.rot) == 2 and turtle.back() then
+        else
+            turnToRot(move.rot)
+            turtle.dig()
+            if not turtle.forward() then
+                return false
+            end
+        end
+        M.pos = M.pos + move
+        updateWorldAfterHorizontalMove()
+        return true
+    end
+end
+M.east.move = executeHorizontalMove(M.east)
+M.south.move = executeHorizontalMove(M.south)
+M.west.move = executeHorizontalMove(M.west)
+M.north.move = executeHorizontalMove(M.north)
+M.up.move = function()
+    turtle.digUp()
+    if not turtle.up() then
+        return false
+    end
+    M.position = M.position + M.up
+    updateWorldAtPosition()
+    updateWorldUp()
+    updateWorldForward()
+    return true
+end
+M.down.move = function()
+    turtle.digDown()
+    if not turtle.down() then
+        return false
+    end
+    M.position = M.position + M.down
+    updateWorldAtPosition()
+    updateWorldDown()
+    updateWorldForward()
+    return true
+end
+
+local function placeHorizontal(move)
+    return function()
+        turnToRot(move.rot)
+        turtle.place()
+        updateWorldForward()
+    end
+end
+M.east.place = placeHorizontal(M.east)
+M.south.place = placeHorizontal(M.south)
+M.west.place = placeHorizontal(M.west)
+M.north.place = placeHorizontal(M.north)
+M.up.place = function()
+    turtle.placeUp()
+    updateWorldUp()
+end
+M.down.place = function()
+    turtle.placeDown()
+    updateWorldDown()
+end
+
+function M.init(position, rotation)
+    M.position = position
+    M.rotation = rotation
+    updateWorldAtPosition()
+    updateWorldForward()
+    updateWorldUp()
+    updateWorldDown()
+end
+
+return M
