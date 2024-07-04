@@ -7,14 +7,15 @@ function hivemind.init(turtleId, worldId, dimensionId)
 end
 
 function hivemind.getTask(timeout)
-    print('ws.receive', timeout or 'nil')
     local message = ws.receive(timeout)
-    print('message', message or 'nil')
+    if message then print('received message:', message) end
     return message
 end
 
 local function send(message)
-    ws.send(textutils.serializeJSON(message))
+    local message = textutils.serializeJSON(message)
+    print('sending message:', message)
+    ws.send(message)
 end
 
 local function sendStatus()
@@ -24,6 +25,18 @@ end
 
 hivemind.getWs = function()
     return ws
+end
+
+---@param updates {coordinates: {x: integer, y: integer, z: integer}, id: string, lastUpdate: integer}[]
+function hivemind.updateWorld(updates)
+    local message = {
+        type = 'updateWorld',
+        updates = updates
+    }
+    if #updates == 0 then
+        message.updates = textutils.empty_json_array
+    end
+    send(message)
 end
 
 return hivemind

@@ -3,6 +3,7 @@ local hivemind = require'hivemind'
 local file = require'file'
 local rotationHelper = require'rotationHelper'
 local task = require'task'
+local world = require'worldHm'
 
 local worldId = file.read'worldId.txt'
 local dimensionId = dimension.getId()
@@ -18,6 +19,8 @@ print('dimensionId', dimensionId)
 print('turtleId', turtleId)
 print('position', position)
 print('rotation', rotation)
+
+world.upload()
 
 local taskRunCoroutine = coroutine.create(task.run)
 while true do

@@ -1,6 +1,6 @@
 require'queue'
-require'vector'
 require'world'
+local Vec = require'vecMemo'
 
 -- current turtle state
 local t = {}

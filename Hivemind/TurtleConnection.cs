@@ -17,26 +17,26 @@ public class TurtleConnection
 
     public async Task SendAsync(string message)
     {
-        await _webSocket.SendAsync(Encoding.UTF8.GetBytes(message), WebSocketMessageType.Text, true, CancellationToken.None);
+        await _webSocket.SendAsync(Encoding.UTF8.GetBytes(message), WebSocketMessageType.Text, true,
+            CancellationToken.None);
     }
 
     private async Task Run()
     {
-        var buffer = new byte[1024 * 4];
-        var receiveResult = await _webSocket.ReceiveAsync(
-            new ArraySegment<byte>(buffer), CancellationToken.None);
-
-        while (!receiveResult.CloseStatus.HasValue)
+        byte[] buffer = new byte[1024];
+        WebSocketReceiveResult? receiveResult;
+        do
         {
-            await _webSocket.SendAsync(
-                new ArraySegment<byte>(buffer, 0, receiveResult.Count),
-                receiveResult.MessageType,
-                receiveResult.EndOfMessage,
-                CancellationToken.None);
+            MemoryStream messageStream = new();
+            do
+            {
+                receiveResult = await _webSocket.ReceiveAsync(buffer, CancellationToken.None);
+                messageStream.Write(buffer, 0, receiveResult.Count);
+            } while (!receiveResult.EndOfMessage);
 
-            receiveResult = await _webSocket.ReceiveAsync(
-                new ArraySegment<byte>(buffer), CancellationToken.None);
-        }
+            if (!receiveResult.CloseStatus.HasValue)
+                await _turtle.MessageHandler.Handle(messageStream);
+        } while (!receiveResult.CloseStatus.HasValue);
 
         _turtle.Connection = null;
 

@@ -14,6 +14,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddMudServices();
 builder.Services.AddControllers();
 builder.Services.AddSingleton<TurtleService>();
+builder.Services.AddTransient<TurtleMessageHandler>();
 builder.Services.AddDbContextFactory<Db>();
 builder.Services.AddScoped(p => p
     .GetRequiredService<IDbContextFactory<Db>>()

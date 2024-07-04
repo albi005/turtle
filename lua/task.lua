@@ -3,8 +3,8 @@ local file = require'file'
 local task = {}
 
 local tasks = {
-    lava = require'lava',
-    mine = require'mine',
+    -- lava = require'lava',
+    -- mine = require'mine',
     standBy = {
         run = function() coroutine.yield(task.events.websocket_message) end,
         stop = function() end
