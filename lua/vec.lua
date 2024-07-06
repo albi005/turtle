@@ -2,8 +2,8 @@ local Vec = {}
 Vec.__index = Vec
 
 function Vec.new(vec)
-    if not vec[1] then
-        print(debug.traceback())
+    if not vec[3] then
+        error('Vec.new: invalid argument: ' .. textutils.serialise(vec))
     end
     local instance = {vec[1], vec[2], vec[3]}
     setmetatable(instance, Vec)

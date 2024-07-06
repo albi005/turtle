@@ -77,15 +77,14 @@ end
 
 local function executeHorizontalMove(move)
     return function()
-        if math.abs(move.rot - M.rot) == 2 and turtle.back() then
-        else
+        if not (math.abs(move.rot - M.rotation) == 2 and turtle.back()) then
             turnToRot(move.rot)
             turtle.dig()
             if not turtle.forward() then
                 return false
             end
         end
-        M.pos = M.pos + move
+        M.position = M.position + move
         updateWorldAfterHorizontalMove()
         return true
     end
@@ -139,6 +138,7 @@ end
 
 function M.init(position, rotation)
     M.position = position
+    print('rotation', rotation)
     M.rotation = rotation
     updateWorldAtPosition()
     updateWorldForward()

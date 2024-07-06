@@ -1,7 +1,7 @@
-local world = {}
-
 local store = require'vecStoreXyzArr':new()
 local hivemind = require'hivemind'
+
+local M = {}
 
 local function getId(hasBlock, data)
     if not hasBlock then
@@ -13,7 +13,7 @@ local function getId(hasBlock, data)
     return data.name
 end
 
-function world.update(coordinates, hasBlock, data)
+function M.update(coordinates, hasBlock, data)
     local lastUpdate = os.epoch'utc'
     local id = getId(hasBlock, data)
 
@@ -24,14 +24,43 @@ function world.update(coordinates, hasBlock, data)
     store:set(coordinates, {id, lastUpdate})
 end
 
-function world.upload()
+local prevTimerId
+local lastUpdate
+
+local function resetTimer()
+    if prevTimerId then
+        os.cancelTimer(prevTimerId)
+    end
+    lastUpdate = os.epoch'utc'
+    prevTimerId = os.startTimer(30)
+end
+
+function M.upload()
+    resetTimer()
+
     local updates = {}
     store:forEach(function(coordinates, data)
-        table.insert(updates, {coordinates = {x = coordinates[1], y = coordinates[2], z = coordinates[3]}, id = data[1], lastUpdate = data[2]})
+        table.insert(updates, {
+            coordinates = {x = coordinates[1], y = coordinates[2], z = coordinates[3]},
+            id = data[1],
+            lastUpdate = data[2]
+        })
     end)
 
     hivemind.updateWorld(updates)
+    fs.delete'worldUpdateQueue.txt'
     store:clear()
+end
+
+function M.run()
+    M.upload()
+    while true do
+        coroutine.yield'timer'
+        print('diff', os.epoch'utc' - lastUpdate)
+        if os.epoch'utc' - lastUpdate >= 25000 then
+            M.upload()
+        end
+    end
 end
 
 do
@@ -45,4 +74,4 @@ do
     end
 end
 
-return world
+return M

@@ -1,21 +1,26 @@
+fs.delete'error.log'
+
 local ok, err = xpcall(function()
     local dimension = require'dimension'
     local hivemind = require'hivemind'
     local file = require'file'
     local rotationHelper = require'rotationHelper'
-    local task = require'task'
+    local jobs = require'jobs'
     local world = require'worldHm'
     local Vec = require'vec'
     local move = require'moveGps'
+    local eventLoop = require'eventLoop'
 
     local worldId = file.read'worldId.txt'
     local dimensionId = dimension.getId()
     local turtleId = os.getComputerID()
     os.setComputerLabel(tostring(turtleId))
-    local position = Vec.new{gps.locate()}
+    local x, y, z = gps.locate()
+    if not x then error('No gps') end
+    local position = Vec.new{x, y, z}
     local rotation = rotationHelper.getRotation(position)
 
-    hivemind.init(turtleId, worldId, dimensionId)
+    hivemind.init(turtleId, worldId, dimensionId, jobs.update)
     move.init(position, rotation)
 
     print('worldId', worldId)
@@ -24,39 +29,12 @@ local ok, err = xpcall(function()
     print('position', position)
     print('rotation', rotation)
 
-    world.upload()
-
-    local taskRunCoroutine = coroutine.create(task.run)
-    while true do
-        local nextTaskId = hivemind.getTask(0)
-        if nextTaskId then task.update(nextTaskId) end
-        local _, waitFor = coroutine.resume(taskRunCoroutine)
-
-        if waitFor then
-            local events = {}
-            if type(waitFor) == 'string' then
-                events[waitFor] = true
-            else
-                for _, eventName in ipairs(waitFor) do
-                    events[eventName] = true
-                end
-            end
-            events[task.events.websocket_message] = true
-            while true do
-                local event = {os.pullEvent()}
-                local eventName = event[1]
-                if events[eventName] then
-                    if event[1] == task.events.websocket_message then
-                        nextTaskId = event[3]
-                        if nextTaskId then task.update(nextTaskId) end
-                    end
-                    break
-                end
-            end
-        end
-    end
+    eventLoop.run(hivemind.run, world.run, jobs.run)
 end, debug.traceback)
 
 if not ok then
     print(err)
+    local file = fs.open('error.log', 'w')
+    file.write(err)
+    file.close()
 end

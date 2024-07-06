@@ -1,15 +1,73 @@
+local events = require'eventLoop'.events
+local async = require'async'
+
 local hivemind = {}
 
 local ws
 
-function hivemind.init(turtleId, worldId, dimensionId)
-    ws = assert(http.websocket('wss://t.alb1.hu/ws?turtleId=' .. turtleId .. '&worldId=' .. worldId .. '&dimendionId=' .. dimensionId))
+local _turtleId
+local _worldId
+local _dimensionId
+local _jobsUpdate
+
+local function retryBackoff(func)
+    for i = 1, 5 do
+        print('connecting, i =', i)
+        local res, err = func()
+        if res then
+            return res
+        end
+        print('failed to connect, retrying in', 3 ^ i, 's, err:', err)
+        async.sleep(3 ^ i)
+    end
 end
 
-function hivemind.getTask(timeout)
-    local message = ws.receive(timeout)
-    if message then print('received message:', message) end
-    return message
+local function connect()
+    ws = assert(retryBackoff(function()
+        return async.websocket(
+            'wss://t.alb1.hu/ws?turtleId=' .. _turtleId .. '&worldId=' .. _worldId .. '&dimensionId=' .. _dimensionId
+        )
+    end))
+    print('connected')
+    os.queueEvent(events.hivemind_connected)
+end
+
+function hivemind.init(turtleId, worldId, dimensionId, jobsUpdate)
+    _turtleId = assert(turtleId)
+    _worldId = assert(worldId)
+    _dimensionId = assert(dimensionId)
+    _jobsUpdate = assert(jobsUpdate)
+end
+
+-- listen for job update or websocket closed messages
+function hivemind.run()
+    print('HELLO')
+    connect()
+    while true do
+        local eventName, url, contentOrCloseReason, isBinaryOrCloseCode = coroutine.yield{events.websocket_closed, events.websocket_message}
+        if eventName == events.websocket_closed then
+            local closeReason = contentOrCloseReason
+            local closeCode = isBinaryOrCloseCode
+            print('websocket closed:', closeReason, closeCode)
+            connect()
+        else
+            local content = contentOrCloseReason
+            local isBinary = isBinaryOrCloseCode
+            print('received message:', content)
+            _jobsUpdate(content)
+        end
+    end
+end
+
+local function retrySend(func)
+    for i = 1, 5 do
+        local ok, res = pcall(func)
+        if ok then
+            return res
+        end
+        print('retrying sending, i =', i)
+        os.pullEvent(events.hivemind_connected)
+    end
 end
 
 local function send(type, data)
@@ -18,17 +76,10 @@ local function send(type, data)
         data = data
     }
     message = textutils.serializeJSON(message)
-    print('sending message:', message)
-    ws.send(message)
-end
-
-local function sendStatus()
-    local fuel = turtle.getFuelLevel()
-    local x, y, z = gps.locate()
-end
-
-hivemind.getWs = function()
-    return ws
+    --print('sending message:', message)
+    retrySend(function()
+        ws.send(message)
+    end)
 end
 
 ---@param updates {coordinates: {x: integer, y: integer, z: integer}, id: string, lastUpdate: integer}[]

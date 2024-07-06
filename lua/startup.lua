@@ -2,9 +2,13 @@
 wget run https://t.alb1.hu en9
 ]]
 
+local tasks = {}
+
 local function install(name)
     fs.delete(name .. '.lua')
-    assert(shell.run('wget https://t.alb1.hu/' .. name .. '.lua'))
+    table.insert(tasks, function()
+        shell.run('wget https://t.alb1.hu/' .. name .. '.lua')
+    end)
 end
 
 local function writeAll(fileName, text)
@@ -23,6 +27,9 @@ if not fs.exists'worldId.txt' then
     writeAll('worldId.txt', worldId)
 end
 
+install'startup'
+
+install'async'
 install'dimension'
 install'file'
 install'hivemind'
@@ -34,13 +41,13 @@ install'move'
 install'moveGps'
 install'queue'
 install'rotationHelper'
-install'startup'
-install'task'
+install'jobs'
+install'eventLoop'
 install'vec'
 install'vecStoreXyzArr'
-install'vector'
 install'world'
 install'worldHm'
+parallel.waitForAll(table.unpack(tasks))
 
 print()
 

@@ -10,7 +10,8 @@ local deltaToRotation = {
 }
 
 function rotationHelper.getRotation(startPosition)
-    for _ = 1, 4 do
+    if turtle.getFuelLevel() < 100 then error('No fuel') end
+    for tries = 0, 3 do
         if turtle.forward() then
             local pos = Vec.new({gps.locate()})
             local delta = pos - startPosition
@@ -22,7 +23,11 @@ function rotationHelper.getRotation(startPosition)
                 end
             end
             turtle.back()
-            return rotation
+            for _ = 1, tries do
+                turtle.turnLeft()
+                rotation = rotation - 1
+            end
+            return rotation % 4
         end
         turtle.turnRight()
     end

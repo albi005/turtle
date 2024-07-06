@@ -20,7 +20,6 @@ builder.Services.AddScoped(p => p
     .GetRequiredService<IDbContextFactory<Db>>()
     .CreateDbContext());
 
-
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -61,7 +60,7 @@ app.MapControllers();
 app.Run();
 
 [ApiController]
-public class MyController : Controller
+public class IndexController : Controller
 {
     [HttpGet("/")]
     public PhysicalFileResult Get()
@@ -77,7 +76,8 @@ public class WebSocketController(TurtleService turtleService) : ControllerBase
     {
         if (HttpContext.WebSockets.IsWebSocketRequest)
         {
-            using WebSocket webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+            using WebSocket webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync(new WebSocketAcceptContext()
+                { KeepAliveInterval = TimeSpan.FromSeconds(30) });
             TaskCompletionSource tcs = new();
             turtleService.Register(worldId, dimensionId, turtleId, webSocket, tcs);
             await tcs.Task;
