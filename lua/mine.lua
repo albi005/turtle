@@ -1,80 +1,80 @@
 require'inventory'
-local move = require'move'
+local move = require'moveGps'
+local config = require'config'
+local path = require'path'
+local Vec = require'vec'
+local inventory = require'inventory'
+local world = require'worldHm'
 
-local function check(inspect, dig)
-    local has_block, data = inspect()
-    if has_block then
-        if string.find(data.name, 'iron') or string.find(data.name, 'diamond') then
-            dig()
+local COL_COUNT = 100
+local TARGETS = {'iron', 'diamond', 'emerald', 'gold', 'redstone', 'lapis', 'coal'}
+
+local M = {}
+
+local moveForward
+local moveBackward
+local moveNextRow
+local state = {basePos = {0, 0, 0}, resumePos = {0, 0, 0}, direction = 0}
+
+local function check(mov)
+    local block = world.get(move.position + mov)
+    if block ~= 'air' then
+        for _, target in ipairs(TARGETS) do
+            if block:find(target) then
+                mov.dig()
+                return
+            end
         end
     end
 end
 
-local function execute(moveExecute)
-    moveExecute()
-    check(turtle.inspect, turtle.dig)
-    check(turtle.inspectUp, turtle.digUp)
-    check(turtle.inspectDown, turtle.digDown)
-    return Inventory.isFull() or turtle.getFuelLevel() < 1000
-end
-
-local length = 100
-
-local function getNextMove(x, z)
-    local evenRow = z % 2 == 0
-    if (evenRow and x == length) or (not evenRow and x == 1) then
-        return move.moves.south
+local function getNextMove(col, row)
+    local evenRow = row % 2 == 0
+    if (evenRow and col == COL_COUNT) or (not evenRow and col == 1) then
+        return moveNextRow
     end
     if evenRow then
-        return move.moves.east
+        return moveForward
     end
-    return move.moves.west
+    return moveBackward
 end
 
-local function mine()
-    repeat
-        local pos = move.getPos()
-        local nextMove = getNextMove(pos[1], pos[3])
-        move.turnToRot(nextMove.rot)
-        check(turtle.inspect, turtle.dig)
-    until execute(nextMove.execute)
-end
+function M.run()
+    while true do
+        state = config.load'mine'
+        if not state then
+            state = {}
+            state.basePos = move.position
+            state.direction = move.rotation
+            state.resumePos = move.position
+            config.save('mine', state)
+        end
+        state.basePos = Vec.new(state.basePos)
+        state.resumePos = Vec.new(state.resumePos)
+        moveForward = move.rotToMove[state.direction]
+        moveBackward = move.rotToMove[(state.direction + 2) % 4]
+        moveNextRow = move.rotToMove[(state.direction + 1) % 4]
 
-local function loadStart()
-    if not fs.exists'mine.dat' then
-        return {3, -3, 0}
-    end
+        path.goTo(state.base)
+        move.turnToRot(state.direction + 2)
+        inventory.dropAllExcept()
+        turtle.select(1)
 
-    local f = fs.open('mine.dat', 'r')
-    local start = textutils.unserialize(f.readAll())
-    f.close()
-    return {start.x, -3, start.z}
-end
+        path.goTo(state.resumePos)
 
-local function saveStart()
-    local f = fs.open('mine.dat', 'w')
-    local pos = move.getPos()
-    local start = {x = pos[1], z = pos[3]}
-    f.write(textutils.serialize(start))
-    f.close()
-end
+        while not inventory.unsafeIsFull() and turtle.getFuelLevel() > 1000 do
+            check(move.up)
+            check(move.down)
+            local fromBase = move.position - state.basePos
+            local nextMove = getNextMove(fromBase[1], fromBase[3])
+            nextMove.move()
+            check(move.getForward())
 
-local function main()
-    turtle.select(1)
-
-    for i = 1, 3 do move.east() end
-    for i = 1, 3 do move.down() end
-    move.goTo(loadStart())
-    Try(mine)
-    saveStart()
-
-    Inventory.dropAll()
-end
-
-local function main2()
-    for i = 1, 1 do
-        main()
+            state.resumePos = move.position
+            config.save('mine', state)
+            coroutine.yield() -- can be stopped by here
+        end
     end
 end
 
-return {run = main2}
+return M

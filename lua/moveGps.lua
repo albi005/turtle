@@ -50,17 +50,19 @@ local function updateWorldAfterHorizontalMove()
 end
 
 local function turnToRot(rot)
+    if not rot then return end
     local diff = rot - M.rotation
+    diff = diff % 4
     if diff == 0 then
         return
     end
-    if diff == 1 or diff == -3 then
+    if diff == 1 then
         turtle.turnRight()
         M.rotation = M.rotation + 1
-    elseif diff == -1 or diff == 3 then
+    elseif diff == 3 then
         turtle.turnLeft()
         M.rotation = M.rotation - 1
-    elseif diff == 2 or diff == -2 then
+    elseif diff == 2 then
         turtle.turnRight()
         M.rotation = M.rotation + 1
         M.rotation = M.rotation % 4
@@ -68,18 +70,35 @@ local function turnToRot(rot)
 
         turtle.turnRight()
         M.rotation = M.rotation + 1
-    else
-        error'invalid rotation'
     end
     M.rotation = M.rotation % 4
     updateWorldForward()
 end
 
+local function dig(move, digDir)
+    digDir = digDir or turtle.dig
+    return function()
+        turnToRot(move.rot)
+        if world.get(M.position + move) == 'air' then
+            return
+        end
+        local didDig = digDir()
+        if didDig then
+            world.update(M.position + move, false)
+        end
+    end
+end
+M.east.dig = dig(M.east)
+M.south.dig = dig(M.south)
+M.west.dig = dig(M.west)
+M.north.dig = dig(M.north)
+M.up.dig = dig(M.up, turtle.digUp)
+M.down.dig = dig(M.down, turtle.digDown)
+
 local function executeHorizontalMove(move)
     return function()
         if not (math.abs(move.rot - M.rotation) == 2 and turtle.back()) then
-            turnToRot(move.rot)
-            turtle.dig()
+            move.dig()
             if not turtle.forward() then
                 return false
             end
@@ -135,6 +154,16 @@ M.down.place = function()
     turtle.placeDown()
     updateWorldDown()
 end
+
+local function getDir(rotationDelta)
+    return function ()
+        return M.rotToMove[(M.rotation + rotationDelta) % 4]
+    end
+end
+M.getForward = getDir(0)
+M.getRight = getDir(1)
+M.getBackward = getDir(2)
+M.getLeft = getDir(3)
 
 function M.init(position, rotation)
     M.position = position

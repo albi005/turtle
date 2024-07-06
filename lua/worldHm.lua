@@ -24,6 +24,10 @@ function M.update(coordinates, hasBlock, data)
     store:set(coordinates, {id, lastUpdate})
 end
 
+function M.get(vec)
+    return store:get(vec).id
+end
+
 local prevTimerId
 local lastUpdate
 

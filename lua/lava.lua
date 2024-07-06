@@ -91,4 +91,15 @@ local function run()
     Inventory.dropAll()
 end
 
+        -- TODO: MOVE TO LAVA.LUA:
+        -- move.goTo(state.base)
+        -- move.turnToRot(state.direction + 2)
+        -- inventory.dropAllExcept'buckets'
+        -- move.getLeft().move()
+        -- move.turnToRot(state.direction + 2)
+        -- local buckets = inventory.ensureBuckets()
+
+        -- for _ = 1, buckets do
+            
+        -- end
 return {run = run}

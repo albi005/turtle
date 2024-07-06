@@ -90,4 +90,25 @@ function hivemind.updateWorld(updates)
     send('updateWorld', updates)
 end
 
+local function httpRequest(path, data)
+    local url = 'https://t.alb1.hu' .. path
+    local response = http.post(url, textutils.serializeJSON(data))
+    if response then
+        local res = textutils.unserialiseJSON(response.readAll())
+        response.close()
+        return res
+    else
+        return nil, 'http request failed'
+    end
+    
+end
+
+---@param start {x: integer, y: integer, z: integer}
+---@param target {x: integer, y: integer, z: integer}
+---@return string[]|nil
+function hivemind.getPath(start, target)
+    local moves = httpRequest('/path', {start = start, ['end'] = target}) -- (list of string) or nil
+    return moves
+end
+
 return hivemind

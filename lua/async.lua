@@ -15,4 +15,9 @@ function M.websocket(url)
     end
 end
 
+function M.reboot()
+    local co = coroutine.create(os.reboot)
+    coroutine.resume(co)
+end
+
 return M

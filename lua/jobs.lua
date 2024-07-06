@@ -6,15 +6,18 @@ local M = {}
 
 local jobs = {
     -- lava = require'lava',
-    -- mine = require'mine',
+    mine = require'mine',
     standBy = {
         run = function() coroutine.yield(events.new_job) end,
         stop = function() end
     },
-    left = {run = function() move.north.move() end},
-    up = {run = function() move.east.move() end},
-    down = {run = function() move.west.move() end},
-    right = {run = function() move.south.move() end},
+    north = {run = function() move.north.move() end},
+    east = {run = function() move.east.move() end},
+    west = {run = function() move.west.move() end},
+    south = {run = function() move.south.move() end},
+    up = {run = function() move.up.move() end},
+    down = {run = function() move.down.move() end},
+    reboot = {run = function() os.reboot() end},
 }
 
 local storedState = textutils.unserialise(file.read'task.txt' or '{}')
