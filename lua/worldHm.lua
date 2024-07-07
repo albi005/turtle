@@ -30,7 +30,11 @@ function M.update(coordinates, hasBlock, data)
 end
 
 function M.get(vec)
-    return worldCache:get(vec)[1]
+    local res = worldCache:get(vec)
+    if not res then
+        error('no data for ' .. tostring(vec))
+    end
+    return res[1]
 end
 
 local prevTimerId

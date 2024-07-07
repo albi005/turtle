@@ -1,3 +1,5 @@
+local log = require'log'
+
 local M = {}
 
 function M.sleep(s)
@@ -25,8 +27,9 @@ function M.httpRequest(request)
     request.headers['Content-Type'] = 'application/json'
     http.request(request)
 
-    local event, url, response, errorResponse = coroutine.yield{'http_success', 'http_failure'}
+    local event, url, response, errorResponse = coroutine.yield('', request.url)
     if event == 'http_success' then
+        log('event:', event, 'url:', url, 'response:', response)
         return true, response
     elseif event == 'http_failure' then
         return false, response, errorResponse

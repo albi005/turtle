@@ -1,4 +1,3 @@
-require'inventory'
 local move = require'moveGps'
 local config = require'config'
 local path = require'path'
@@ -7,7 +6,7 @@ local inventory = require'inventory'
 local world = require'worldHm'
 local log = require'log'
 
-local COL_COUNT = 100
+local COL_COUNT = 69
 local TARGETS = {'iron', 'diamond', 'emerald', 'gold', 'redstone', 'lapis', 'coal'}
 
 local M = {}
@@ -31,8 +30,9 @@ local function check(mov)
 end
 
 local function getNextMove(col, row)
+    log('col ', col, 'row ', row)
     local evenRow = row % 2 == 0
-    if (evenRow and col == COL_COUNT) or (not evenRow and col == 1) then
+    if (evenRow and col >= COL_COUNT) or (not evenRow and col == 1) then
         return moveNextRow
     end
     if evenRow then
@@ -49,45 +49,65 @@ local function saveState()
     })
 end
 
+function M.stop()
+    path.goTo(state.basePos)
+    move.turnToRot(state.direction + 2)
+    inventory.dropAllExcept()
+end
+
+local function getColAndRow()
+    local fromBase = move.position - state.basePos
+    if state.direction == 0 then
+        return fromBase[1], fromBase[3]
+    elseif state.direction == 1 then
+        return fromBase[3], -fromBase[1]
+    elseif state.direction == 2 then
+        return -fromBase[1], -fromBase[3]
+    else
+        return -fromBase[3], fromBase[1]
+    end
+end
+
 function M.run()
+    state = config.load'mine'
+    if not state then
+        state = {}
+        state.basePos = move.position
+        state.direction = move.rotation
+        state.resumePos = move.position
+        saveState()
+    end
+    state.basePos = Vec.new(state.basePos)
+    state.resumePos = Vec.new(state.resumePos)
+    moveForward = move.rotToMove[state.direction]
+    moveBackward = move.rotToMove[(state.direction + 2) % 4]
+    moveNextRow = move.rotToMove[(state.direction + 1) % 4]
     while true do
-        state = config.load'mine'
-        if not state then
-            state = {}
-            state.basePos = move.position
-            state.direction = move.rotation
-            state.resumePos = move.position
-            saveState()
-        end
-        state.basePos = Vec.new(state.basePos)
-        state.resumePos = Vec.new(state.resumePos)
-        moveForward = move.rotToMove[state.direction]
-        moveBackward = move.rotToMove[(state.direction + 2) % 4]
-        moveNextRow = move.rotToMove[(state.direction + 1) % 4]
-        log('starting mining at', state.resumePos, 'facing', state.direction)
-
-        path.goTo(state.basePos)
-        move.turnToRot(state.direction + 2)
-        inventory.dropAllExcept()
         turtle.select(1)
-
-        path.goTo(state.resumePos)
-
-        coroutine.yield'char'
+        if not inventory.unsafeIsFull() and turtle.getFuelLevel() > 1000 then
+            log('resuming mining at', state.resumePos, 'facing', state.direction)
+            path.goTo(state.resumePos)
+        end
 
         while not inventory.unsafeIsFull() and turtle.getFuelLevel() > 1000 do
             check(move.up)
             check(move.down)
-            local fromBase = move.position - state.basePos
-            local nextMove = getNextMove(fromBase[1], fromBase[3])
+            local nextMove = getNextMove(getColAndRow())
             nextMove.move()
-            log'checking forward'
             check(move.getForward())
-            log'checked forward'
 
             state.resumePos = move.position
             saveState()
             coroutine.yield() -- can be stopped by here
+        end
+
+        M.stop()
+
+        if turtle.getFuelLevel() < 1000 then
+            log'out of fuel'
+            os.setComputerLabel'OUT OF FUEL'
+            -- TODO: set status
+            return
         end
     end
 end

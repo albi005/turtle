@@ -13,12 +13,12 @@ local _jobsUpdate
 
 local function retryBackoff(func)
     for i = 1, 8 do
-        print('connecting, i =', i)
+        log('hm: connecting, i =', i)
         local res, err = func()
         if res then
             return res
         end
-        print('failed to connect, retrying in', 3 ^ i, 's, err:', err)
+        log('hm: failed to connect, retrying in', 3 ^ i, 's, err:', err)
         async.sleep(3 ^ i)
     end
 end
@@ -75,32 +75,39 @@ local function send(type, data)
         if ok then
             return
         end
-        log('hivemind.send: retrying sending, i = ', i)
+        log('hm.send: retrying sending, i = ', i)
     end
-end
-
----@param updates {coordinates: {x: integer, y: integer, z: integer}, id: string, lastUpdate: integer}[]
-function hivemind.updateWorld(updates)
-    if #updates == 0 then
-        return
-    end
-    send('updateWorld', updates)
 end
 
 local function httpRequest(path, data)
+    -- ensure the server knows about the turtle
+    if not ws then
+        os.pullEvent(events.hivemind_connected)
+    end
+
     local url = 'https://t.alb1.hu' .. path
-    data.turtleId = _turtleId
-    data.worldId = _worldId
     local body = textutils.serialiseJSON(data)
-    print('http request:', url, body)
     local ok, responseOrError, errResponse = async.httpRequest{
         method = 'POST',
         url = url,
         body = body,
+        headers = {
+            worldId = _worldId,
+            turtleId = tostring(_turtleId),
+            dimensionId = tostring(_dimensionId),
+        }
     }
     if ok then
-        local res = textutils.unserialiseJSON(responseOrError.readAll())
-        print('http response:', textutils.serialise(res))
+        local readOk, jsonOrErr = pcall(function()
+            local json = responseOrError.readAll()
+            log('pcall json:', json)
+            return json
+        end)
+        if not readOk then
+            log('failed to read response: ' .. jsonOrErr)
+            return
+        end
+        local res = textutils.unserialiseJSON(jsonOrErr)
         responseOrError.close()
         return res
     else
@@ -115,8 +122,15 @@ function hivemind.getPath(start, target)
     assert(start.x and start.y and start.z, 'invalid start: ' .. textutils.serialise(start))
     assert(target.x and target.y and target.z, 'invalid target: ' .. textutils.serialise(target))
     local moves = httpRequest('/path', {start = start, ['end'] = target}) -- (list of string) or nil
-    print('path:', textutils.serialise(moves))
+    log('getPath:', textutils.serialise(moves))
     return moves
+end
+
+---@param updates {coordinates: {x: integer, y: integer, z: integer}, id: string, lastUpdate: integer}[]
+function hivemind.updateWorld(updates)
+    if #updates == 0 then return end
+    log('updateWorld: ', updates)
+    httpRequest('/updateWorld', updates)
 end
 
 return hivemind

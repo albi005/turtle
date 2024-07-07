@@ -1,6 +1,9 @@
 local file = require'file'
 local move = require'moveGps'
 local events = require'eventLoop'.events
+local log = require'log'
+local config = require'config'
+local async = require'async'
 
 local M = {}
 
@@ -17,18 +20,20 @@ local jobs = {
     south = {run = function() move.south.move() end},
     up = {run = function() move.up.move() end},
     down = {run = function() move.down.move() end},
-    reboot = {run = function() os.reboot() end},
+    reboot = {run = function() async.reboot() end},
 }
 
-local storedState = textutils.unserialise(file.read'task.txt' or '{}')
+local storedState = config.load'jobs' or {}
 local currentJobId = storedState.currentTask
 local nextTaskId = storedState.nextTask
 
-local JOB_FILE = 'jobs.txt'
-
 local function saveTaskState()
-    file.write(JOB_FILE, textutils.serialise{
-        currentTask = currentJobId,
+    local current = currentJobId
+    if current == 'reboot' then
+        current = nil
+    end
+    config.save('jobs', {
+        currentTask = current,
         nextTask = nextTaskId
     })
 end
@@ -42,14 +47,14 @@ function M.run()
         local event = {}
 
         repeat
-            --print('running task', currentJobId or 'nil')
+            log('jobs: resuming task ', currentJobId or 'nil')
             local ok, waitFor, timerId = coroutine.resume(currentTaskCoroutine, table.unpack(event)) -- progress current task
             if not ok then
                 error(waitFor .. debug.traceback(currentTaskCoroutine))
             end
-            --print('waiting for', waitFor or 'nil')
+            log('jobs: waiting for ', waitFor or 'nil')
             event = {coroutine.yield(waitFor, timerId)}
-        -- couroutine.yield without arguments means the task can be stopped so we can switch to the next task
+            -- couroutine.yield without arguments means the task can be stopped so we can switch to the next task
         until (nextTaskId and not waitFor) or coroutine.status(currentTaskCoroutine) == 'dead'
 
         if currentTask.stop then
@@ -59,7 +64,7 @@ function M.run()
         -- the next task might have changed
         coroutine.yield()
 
-        print('switching task from', currentJobId or 'nil', 'to', nextTaskId or 'nil')
+        log('switching task from ', currentJobId or 'nil', ' to ', nextTaskId or 'nil')
         currentJobId = nextTaskId
         nextTaskId = nil
         saveTaskState()

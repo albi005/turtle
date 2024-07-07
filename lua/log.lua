@@ -1,3 +1,5 @@
+local pretty = require'cc.pretty'
+
 local M = {}
 
 local opts = {
@@ -6,21 +8,38 @@ local opts = {
 }
 
 fs.delete'log.txt'
+fs.delete'_log'
+
+local function asd(val)
+    local t = type(val)
+    if t == 'string' then
+        return val
+    elseif t == 'function' then
+        return '*function*'
+    elseif t == 'thread' then
+        return '*thread*'
+    elseif t == 'userdata' then
+        return '*userdata*'
+    elseif t == 'table' and val.inv then
+        local vec = val
+        val = {vec[1], vec[2], vec[3], rot = vec.rot}
+    end
+    print(t)
+    return tostring(pretty.pretty(val, nil))
+end
 
 function M.log(...)
     local args = {...}
     for i = 1, #args do
-        if type(args[i]) == 'table' then
-            if args[i].inv then
-                args[i] = tostring(args[i])
-            else
-                args[i] = textutils.serialize(args[i], opts)
-            end
-        end
+        args[i] = asd(args[i])
     end
-    local str = table.concat(args)
+    local str = table.concat(args, ' ')
     print(str)
-    local file = fs.open('log.txt', 'a')
+
+    if fs.getFreeSpace'/' < (fs.getCapacity'/' / 2) then
+        fs.delete'_log'
+    end
+    local file = fs.open('_log', 'a')
     file.writeLine(str)
     file.close()
 end

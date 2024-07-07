@@ -1,3 +1,5 @@
+local log = require'log'
+
 local M = {}
 
 M.events = {
@@ -42,13 +44,13 @@ function M.run(...)
     end
 
     local waitCount = 0
-    local timers = {}
+    local waitIds = {}
 
     while true do
         -- run ready tasks
         for _, task in ipairs(tasks) do
             if not task.wait then
-                local ok, res, timerId = coroutine.resume(task.coroutine, table.unpack(task.event or {}))
+                local ok, res, waitId = coroutine.resume(task.coroutine, table.unpack(task.event or {}))
                 task.event = nil
 
                 if not ok then
@@ -66,8 +68,8 @@ function M.run(...)
                         end
                     elseif type(wait) == 'string' then
                         local event = wait
-                        if event == 'timer' and timerId then
-                            timers[timerId] = task
+                        if waitId then
+                            waitIds[waitId] = task
                         else
                             task.wait[event] = true
                         end
@@ -82,17 +84,19 @@ function M.run(...)
 
         for _, event in ipairs(events) do
             local eventName = event[1]
-            print('event', eventName)
-            if eventName == 'timer' then
-                local timerId = event[2]
-                local task = timers[timerId]
-                if task then
-                    task.wait = nil
-                    task.event = event
-                    waitCount = waitCount - 1
-                    timers[timerId] = nil
-                end
+            log('event: ', eventName)
+
+            local waitId = event[2]
+            if waitId then
+            local task = waitIds[waitId]
+            if task then
+                task.wait = nil
+                task.event = event
+                waitCount = waitCount - 1
+                waitIds[waitId] = nil
             end
+        end
+
             for _, task in ipairs(tasks) do
                 if task.wait and task.wait[eventName] then
                     task.wait = nil

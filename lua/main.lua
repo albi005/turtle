@@ -1,15 +1,16 @@
 fs.delete'error.log'
 
 local ok, err = xpcall(function()
-    local dimension = require'dimension'
-    local hivemind = require'hivemind'
-    local file = require'file'
-    local rotationHelper = require'rotationHelper'
-    local jobs = require'jobs'
-    local world = require'worldHm'
     local Vec = require'vec'
-    local move = require'moveGps'
+    local dimension = require'dimension'
     local eventLoop = require'eventLoop'
+    local file = require'file'
+    local hivemind = require'hivemind'
+    local jobs = require'jobs'
+    local log = require'log'
+    local move = require'moveGps'
+    local rotationHelper = require'rotationHelper'
+    local world = require'worldHm'
 
     local worldId = file.read'worldId.txt'
     local dimensionId = dimension.getId()
@@ -23,11 +24,11 @@ local ok, err = xpcall(function()
     hivemind.init(turtleId, worldId, dimensionId, jobs.update)
     move.init(position, rotation)
 
-    print('worldId', worldId)
-    print('dimensionId', dimensionId)
-    print('turtleId', turtleId)
-    print('position', position)
-    print('rotation', rotation)
+    log('worldId', worldId)
+    log('dimensionId', dimensionId)
+    log('turtleId', turtleId)
+    log('position', position)
+    log('rotation', rotation)
 
     eventLoop.run(hivemind.run, world.run, jobs.run)
 end, debug.traceback)

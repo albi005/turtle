@@ -1,17 +1,25 @@
 local world = require'worldHm'
 local log = require'log'
+local Vec = require'vec'
 
 local M = {}
 
 M.position = {0, 0, 0} -- current turtle position
 M.rotation = 0         -- current turtle rotation
 
-M.east = {1, 0, 0}
-M.south = {0, 0, 1}
-M.west = {-1, 0, 0}
-M.north = {0, 0, -1}
-M.up = {0, 1, 0}
-M.down = {0, -1, 0}
+M.east = Vec.new{1, 0, 0}
+M.south = Vec.new{0, 0, 1}
+M.west = Vec.new{-1, 0, 0}
+M.north = Vec.new{0, 0, -1}
+M.up = Vec.new{0, 1, 0}
+M.down = Vec.new{0, -1, 0}
+
+M.east.id = 'east'
+M.south.id = 'south'
+M.west.id = 'west'
+M.north.id = 'north'
+M.up.id = 'up'
+M.down.id = 'down'
 
 M.east.inv = M.west
 M.south.inv = M.north
@@ -33,6 +41,7 @@ M.rotToMove = {
 }
 
 local function updateWorldForward()
+    log('updateWorldForward, rotation', M.rotation)
     world.update(M.position + M.rotToMove[M.rotation], turtle.inspect())
 end
 local function updateWorldUp()
@@ -81,11 +90,9 @@ local function dig(move, digDir)
     digDir = digDir or turtle.dig
     return function()
         M.turnToRot(move.rot)
-        log('world.get(M.position + ', move, ')')
         if world.get(M.position + move) == 'air' then
             return
         end
-        log('world.got')
         local didDig = digDir()
         if didDig then
             world.update(M.position + move, false)
@@ -104,15 +111,24 @@ local function executeHorizontalMove(move)
         if not (math.abs(move.rot - M.rotation) == 2 and turtle.back()) then
             move.dig()
             if not turtle.forward() then
-                return false
+                -- gravel or sand: dig again
+                repeat
+                    local didDig = turtle.dig()
+                    local didMove = turtle.forward()
+                    if not didDig and not didMove then
+                        return false
+                    end
+                until didMove
             end
+            M.position = M.position + move
             updateWorldAll()
         else
+            -- executed turtle.back() shortcut
+            M.position = M.position + move
             updateWorldAtPosition()
             updateWorldUp()
             updateWorldDown()
         end
-        M.position = M.position + move
         return true
     end
 end
@@ -164,7 +180,7 @@ M.down.place = function()
 end
 
 local function getDir(rotationDelta)
-    return function ()
+    return function()
         return M.rotToMove[(M.rotation + rotationDelta) % 4]
     end
 end
@@ -175,7 +191,7 @@ M.getLeft = getDir(3)
 
 function M.init(position, rotation)
     M.position = position
-    print('rotation', rotation)
+    log('rotation = ', rotation)
     M.rotation = rotation
     updateWorldAll()
 end

@@ -23,7 +23,6 @@ end
 function Store:get(vec)
     local x, y, z = vec[1], vec[2], vec[3]
     local d = self.d
-    log('Store:get d=', d)
     if d[x] and d[x][y] and d[x][y][z] then
         return d[x][y][z]
     end

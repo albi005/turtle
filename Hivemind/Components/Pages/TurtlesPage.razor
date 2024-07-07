@@ -39,7 +39,7 @@
 
             @foreach (string job in _jobs)
             {
-                <MudButton OnClick="@(() => turtle.Connection?.SendAsync(job)!)">
+                <MudButton OnClick="@(() => turtle.Connection.SendAsync(job)!)">
                     @job
                 </MudButton>
             }
@@ -49,7 +49,7 @@
 
 @code {
 
-    private static string[] _jobs = ["mine"];
+    private static string[] _jobs = ["mine", "reboot"];
 
     protected override void OnInitialized()
     {

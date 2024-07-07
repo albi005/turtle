@@ -28,6 +28,8 @@ public record Dimension(string Name)
 
     public List<Move>? CalculatePath(Coordinates start, Coordinates end)
     {
+        if (start == end) return [];
+
         Queue<Coordinates> queue = [];
         queue.Enqueue(end);
         Dictionary<Coordinates, Move> nextMoves = [];
@@ -51,7 +53,36 @@ public record Dimension(string Name)
         }
 
         if (!nextMoves.ContainsKey(start))
+        {
+            long minX = Math.Min(start.X, end.X);
+            long minZ = Math.Min(start.Z, end.Z);
+            long maxX = Math.Max(start.X, end.X);
+            long maxZ = Math.Max(start.Z, end.Z);
+            for (long x = minX; x <= maxX; x++)
+            {
+                for (long z = minZ; z < maxZ; z++)
+                {
+                    Coordinates coordinates = new(x, start.Y, z);
+                    if (coordinates == start) Console.Write('S');
+                    else if (coordinates == end) Console.Write('E');
+                    else
+                    {
+                        var b = Blocks.GetValueOrDefault(coordinates);
+                        if (b == null) Console.Write('.');
+                        else
+                        {
+                            Console.Write(b.Type.Id switch
+                            {
+                                "air" => 'O',
+                                _ => 'X'
+                            });
+                        }
+                    }
+                }
+                Console.WriteLine();
+            }
             return null;
+        }
 
         current = start;
         List<Move> moves = [];

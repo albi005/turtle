@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
-using World = Hivemind.World;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -94,21 +93,5 @@ public class WebSocketController(TurtleService turtleService) : ControllerBase
         {
             HttpContext.Response.StatusCode = StatusCodes.Status418ImATeapot;
         }
-    }
-}
-
-public class PathController(TurtleService turtleService) : ControllerBase
-{
-    public record PathRequest(string WorldId, uint TurtleId, Coordinates Start, Coordinates End);
-
-    [HttpPost("/path")]
-    public IEnumerable<string>? Get([FromBody] PathRequest request)
-    {
-        World world = turtleService.Worlds[request.WorldId];
-        Turtle turtle = world.Turtles[request.TurtleId];
-        Dimension dimension = turtle.Dimension;
-        return dimension
-            .CalculatePath(request.Start, request.End)?
-            .Select(m => m.Id);
     }
 }
