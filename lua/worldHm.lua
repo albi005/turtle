@@ -1,7 +1,11 @@
-local store = require'vecStoreXyzArr':new()
+local VecStore = require'vecStoreXyzArr'
 local hivemind = require'hivemind'
+local log = require'log'
 
 local M = {}
+
+local worldCache = VecStore:new()
+local updateStore = VecStore:new()
 
 local function getId(hasBlock, data)
     if not hasBlock then
@@ -21,11 +25,12 @@ function M.update(coordinates, hasBlock, data)
     f.write(textutils.serialize({coordinates, id, lastUpdate}, {compact = true}) .. '\n')
     f.close()
 
-    store:set(coordinates, {id, lastUpdate})
+    worldCache:set(coordinates, {id, lastUpdate})
+    updateStore:set(coordinates, {id, lastUpdate})
 end
 
 function M.get(vec)
-    return store:get(vec).id
+    return worldCache:get(vec)[1]
 end
 
 local prevTimerId
@@ -43,7 +48,7 @@ function M.upload()
     resetTimer()
 
     local updates = {}
-    store:forEach(function(coordinates, data)
+    updateStore:forEach(function(coordinates, data)
         table.insert(updates, {
             coordinates = {x = coordinates[1], y = coordinates[2], z = coordinates[3]},
             id = data[1],
@@ -53,14 +58,13 @@ function M.upload()
 
     hivemind.updateWorld(updates)
     fs.delete'worldUpdateQueue.txt'
-    store:clear()
+    updateStore:clear()
 end
 
 function M.run()
     M.upload()
     while true do
         coroutine.yield'timer'
-        print('diff', os.epoch'utc' - lastUpdate)
         if os.epoch'utc' - lastUpdate >= 25000 then
             M.upload()
         end
@@ -72,7 +76,8 @@ do
         local f = fs.open('worldUpdateQueue.txt', 'r')
         for line in f.readLine do
             local data = textutils.unserialize(line)
-            store:set(data[1], {data[2], data[3]})
+            worldCache:set(data[1], {data[2], data[3]})
+            updateStore:set(data[1], {data[2], data[3]})
         end
         f.close()
     end

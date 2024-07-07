@@ -1,12 +1,14 @@
 local hivemind = require'hivemind'
 local move = require'moveGps'
 local Vec = require'vec'
+local world = require'worldHm'
 
 local M = {}
 
 ---@param target integer[]
 function M.goTo(target)
-    local moves = hivemind.getPath(move.position, target:toVector())
+    world.upload()
+    local moves = hivemind.getPath(move.position:toVector(), target:toVector())
     if not moves then
         error('no path found to target ' .. textutils.serialise(target))
     end

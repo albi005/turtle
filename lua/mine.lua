@@ -5,6 +5,7 @@ local path = require'path'
 local Vec = require'vec'
 local inventory = require'inventory'
 local world = require'worldHm'
+local log = require'log'
 
 local COL_COUNT = 100
 local TARGETS = {'iron', 'diamond', 'emerald', 'gold', 'redstone', 'lapis', 'coal'}
@@ -17,6 +18,7 @@ local moveNextRow
 local state = {basePos = {0, 0, 0}, resumePos = {0, 0, 0}, direction = 0}
 
 local function check(mov)
+    log('checking ', Vec.new(move.position) + mov)
     local block = world.get(move.position + mov)
     if block ~= 'air' then
         for _, target in ipairs(TARGETS) do
@@ -39,6 +41,14 @@ local function getNextMove(col, row)
     return moveBackward
 end
 
+local function saveState()
+    config.save('mine', {
+        basePos = Vec.new(state.basePos),
+        resumePos = Vec.new(state.resumePos),
+        direction = state.direction
+    })
+end
+
 function M.run()
     while true do
         state = config.load'mine'
@@ -47,20 +57,23 @@ function M.run()
             state.basePos = move.position
             state.direction = move.rotation
             state.resumePos = move.position
-            config.save('mine', state)
+            saveState()
         end
         state.basePos = Vec.new(state.basePos)
         state.resumePos = Vec.new(state.resumePos)
         moveForward = move.rotToMove[state.direction]
         moveBackward = move.rotToMove[(state.direction + 2) % 4]
         moveNextRow = move.rotToMove[(state.direction + 1) % 4]
+        log('starting mining at', state.resumePos, 'facing', state.direction)
 
-        path.goTo(state.base)
+        path.goTo(state.basePos)
         move.turnToRot(state.direction + 2)
         inventory.dropAllExcept()
         turtle.select(1)
 
         path.goTo(state.resumePos)
+
+        coroutine.yield'char'
 
         while not inventory.unsafeIsFull() and turtle.getFuelLevel() > 1000 do
             check(move.up)
@@ -68,10 +81,12 @@ function M.run()
             local fromBase = move.position - state.basePos
             local nextMove = getNextMove(fromBase[1], fromBase[3])
             nextMove.move()
+            log'checking forward'
             check(move.getForward())
+            log'checked forward'
 
             state.resumePos = move.position
-            config.save('mine', state)
+            saveState()
             coroutine.yield() -- can be stopped by here
         end
     end

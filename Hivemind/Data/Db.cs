@@ -5,8 +5,8 @@ namespace Hivemind.Data;
 
 public class Db : DbContext
 {
-    public DbSet<World> Worlds => Set<World>();
-    public DbSet<Block> Blocks => Set<Block>();
+    public DbSet<DbWorld> Worlds => Set<DbWorld>();
+    public DbSet<DbBlock> Blocks => Set<DbBlock>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -14,20 +14,25 @@ public class Db : DbContext
     }
 }
 
-public record World(uint Id, string Name);
+[Index(nameof(Name), IsUnique = true)]
+public record DbWorld(string Name)
+{
+    public uint Id { get; set; }
+}
 
-[PrimaryKey(nameof(World), nameof(Dimension), nameof(X), nameof(Y), nameof(Z))]
-public record Block(
-    World World,
+[PrimaryKey(nameof(WorldId), nameof(Dimension), nameof(X), nameof(Y), nameof(Z))]
+public record DbBlock(
+    uint WorldId,
     byte Dimension, // 0 = overworld, 1 = nether, 2 = end
     long X,
     long Y,
     long Z,
     [MaxLength(40)] string Type,
-    DateTime? LastUpdated = null
+    DateTime LastUpdate
 )
 {
-    public uint WorldId { get; set; } = World.Id;
+    public DbWorld World { get; set; } = null!;
+
     public string Type { get; set; } = Type;
-    public DateTime? LastUpdated { get; set; } = LastUpdated; // UTC
+    public DateTime LastUpdate { get; set; } = LastUpdate; // UTC
 }

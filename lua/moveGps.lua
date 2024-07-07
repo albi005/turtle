@@ -1,4 +1,5 @@
 local world = require'worldHm'
+local log = require'log'
 
 local M = {}
 
@@ -43,13 +44,14 @@ end
 local function updateWorldAtPosition()
     world.update(M.position, false)
 end
-local function updateWorldAfterHorizontalMove()
+local function updateWorldAll()
+    updateWorldForward()
     updateWorldAtPosition()
     updateWorldUp()
     updateWorldDown()
 end
 
-local function turnToRot(rot)
+function M.turnToRot(rot)
     if not rot then return end
     local diff = rot - M.rotation
     diff = diff % 4
@@ -78,10 +80,12 @@ end
 local function dig(move, digDir)
     digDir = digDir or turtle.dig
     return function()
-        turnToRot(move.rot)
+        M.turnToRot(move.rot)
+        log('world.get(M.position + ', move, ')')
         if world.get(M.position + move) == 'air' then
             return
         end
+        log('world.got')
         local didDig = digDir()
         if didDig then
             world.update(M.position + move, false)
@@ -102,9 +106,13 @@ local function executeHorizontalMove(move)
             if not turtle.forward() then
                 return false
             end
+            updateWorldAll()
+        else
+            updateWorldAtPosition()
+            updateWorldUp()
+            updateWorldDown()
         end
         M.position = M.position + move
-        updateWorldAfterHorizontalMove()
         return true
     end
 end
@@ -137,7 +145,7 @@ end
 
 local function placeHorizontal(move)
     return function()
-        turnToRot(move.rot)
+        M.turnToRot(move.rot)
         turtle.place()
         updateWorldForward()
     end
@@ -169,10 +177,7 @@ function M.init(position, rotation)
     M.position = position
     print('rotation', rotation)
     M.rotation = rotation
-    updateWorldAtPosition()
-    updateWorldForward()
-    updateWorldUp()
-    updateWorldDown()
+    updateWorldAll()
 end
 
 return M

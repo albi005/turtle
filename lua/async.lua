@@ -20,4 +20,18 @@ function M.reboot()
     coroutine.resume(co)
 end
 
+function M.httpRequest(request)
+    request.headers = request.headers or {}
+    request.headers['Content-Type'] = 'application/json'
+    http.request(request)
+
+    local event, url, response, errorResponse = coroutine.yield{'http_success', 'http_failure'}
+    if event == 'http_success' then
+        return true, response
+    elseif event == 'http_failure' then
+        return false, response, errorResponse
+    end
+    
+end
+
 return M

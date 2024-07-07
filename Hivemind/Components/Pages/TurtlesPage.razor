@@ -36,11 +36,20 @@
                     <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowRight"></MudIcon>
                 </MudButton>
             </MudButtonGroup>
+
+            @foreach (string job in _jobs)
+            {
+                <MudButton OnClick="@(() => turtle.Connection?.SendAsync(job)!)">
+                    @job
+                </MudButton>
+            }
         </p>
     }
 }
 
 @code {
+
+    private static string[] _jobs = ["mine"];
 
     protected override void OnInitialized()
     {

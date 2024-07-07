@@ -1,8 +1,11 @@
+local log = require'log'
+
 -- array stored in tables per dimension
 
 local Store = {}
 
 function Store:new()
+    log('Store:new')
     local store = {d = {}}
     setmetatable(store, self)
     self.__index = self
@@ -20,6 +23,7 @@ end
 function Store:get(vec)
     local x, y, z = vec[1], vec[2], vec[3]
     local d = self.d
+    log('Store:get d=', d)
     if d[x] and d[x][y] and d[x][y][z] then
         return d[x][y][z]
     end

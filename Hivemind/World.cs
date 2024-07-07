@@ -2,14 +2,14 @@ using System.Collections.Concurrent;
 
 namespace Hivemind;
 
-public record Turtle(uint Id, World World, Dimension Dimension, TurtleMessageHandler MessageHandler)
+public record Turtle(uint Id, World World, Dimension Dimension)
 {
     public TurtleConnection? Connection { get; set; }
     public Dimension Dimension { get; set; } = Dimension;
     public Coordinates? Position { get; set; }
 }
 
-public record World(string Id)
+public record World(string Name)
 {
     public Dimension GetDimension(byte id) => id switch
     {
@@ -24,7 +24,7 @@ public record World(string Id)
 
 public record Dimension(string Name)
 {
-    public ConcurrentDictionary<Coordinates, BlockType> Blocks { get; } = new();
+    public ConcurrentDictionary<Coordinates, Block> Blocks { get; } = new();
 
     public List<Move>? CalculatePath(Coordinates start, Coordinates end)
     {
@@ -39,7 +39,9 @@ public record Dimension(string Name)
             foreach (Move move in Move.All)
             {
                 Coordinates next = current + move.Delta;
-                if (Blocks[next] != BlockType.Air || nextMoves.ContainsKey(next))
+                if (!Blocks.TryGetValue(next, out var nextBlock)
+                    || nextBlock.Type != BlockType.Air
+                    || nextMoves.ContainsKey(next))
                     continue;
                 queue.Enqueue(next);
                 nextMoves[next] = move.Inverse;
@@ -106,12 +108,7 @@ public record Block(BlockType Type, DateTime UpdateTime)
     }
 }
 
-public record class BlockType(string Id)
+public record struct BlockType(string Id)
 {
     public static BlockType Air { get; } = new("air");
-    public static BlockType Lava { get; } = new("lava");
-    public static BlockType Solid { get; } = new("solid");
-    public static BlockType Barrier { get; } = new("barrier");
 }
-
-public record BlockUpdate(byte Dimension, long X, long Y, long Z, string Type);

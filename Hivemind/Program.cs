@@ -14,8 +14,11 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddMudServices();
 builder.Services.AddControllers();
-builder.Services.AddSingleton<TurtleService>();
 builder.Services.AddTransient<TurtleMessageHandler>();
+builder.Services.AddScoped<WorldRepository>();
+builder.Services.AddScoped<BlockRepository>();
+builder.Services.AddSingleton<TurtleService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<TurtleService>());
 builder.Services.AddDbContextFactory<Db>();
 builder.Services.AddScoped(p => p
     .GetRequiredService<IDbContextFactory<Db>>()
@@ -58,6 +61,11 @@ app.MapControllers();
 //     // Do logging or other work that doesn't write to the Response.
 // });
 
+await using (var startupScope = app.Services.CreateAsyncScope())
+{
+    await startupScope.ServiceProvider.GetRequiredService<Db>().Database.MigrateAsync();
+}
+
 app.Run();
 
 public class IndexController : ControllerBase
@@ -65,7 +73,7 @@ public class IndexController : ControllerBase
     [HttpGet("/")]
     public PhysicalFileResult Get()
     {
-        return PhysicalFile("/home/albi/src/turtle/lua/startup.lua", "text/plain");
+        return PhysicalFile("/home/albi/src/turtle/lua/install.lua", "text/plain");
     }
 }
 
@@ -79,7 +87,7 @@ public class WebSocketController(TurtleService turtleService) : ControllerBase
             using WebSocket webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync(new WebSocketAcceptContext()
                 { KeepAliveInterval = TimeSpan.FromSeconds(30) });
             TaskCompletionSource tcs = new();
-            turtleService.Register(worldId, dimensionId, turtleId, webSocket, tcs);
+            await turtleService.Register(worldId, dimensionId, turtleId, webSocket, tcs);
             await tcs.Task;
         }
         else
@@ -93,8 +101,7 @@ public class PathController(TurtleService turtleService) : ControllerBase
 {
     public record PathRequest(string WorldId, uint TurtleId, Coordinates Start, Coordinates End);
 
-    [Route("/path")]
-    [HttpPost]
+    [HttpPost("/path")]
     public IEnumerable<string>? Get([FromBody] PathRequest request)
     {
         World world = turtleService.Worlds[request.WorldId];

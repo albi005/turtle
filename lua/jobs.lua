@@ -42,12 +42,12 @@ function M.run()
         local event = {}
 
         repeat
-            print('running task', currentJobId or 'nil')
+            --print('running task', currentJobId or 'nil')
             local ok, waitFor, timerId = coroutine.resume(currentTaskCoroutine, table.unpack(event)) -- progress current task
             if not ok then
                 error(waitFor .. debug.traceback(currentTaskCoroutine))
             end
-            print('waiting for', waitFor or 'nil')
+            --print('waiting for', waitFor or 'nil')
             event = {coroutine.yield(waitFor, timerId)}
         -- couroutine.yield without arguments means the task can be stopped so we can switch to the next task
         until (nextTaskId and not waitFor) or coroutine.status(currentTaskCoroutine) == 'dead'

@@ -16,7 +16,7 @@ local ok, err = xpcall(function()
     local turtleId = os.getComputerID()
     os.setComputerLabel(tostring(turtleId))
     local x, y, z = gps.locate()
-    if not x then error('No gps') end
+    if not x then error'No gps' end
     local position = Vec.new{x, y, z}
     local rotation = rotationHelper.getRotation(position)
 
@@ -33,7 +33,7 @@ local ok, err = xpcall(function()
 end, debug.traceback)
 
 if not ok then
-    print(err)
+    print'ERROR: written to error.log'
     local file = fs.open('error.log', 'w')
     file.write(err)
     file.close()
