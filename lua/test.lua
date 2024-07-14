@@ -197,7 +197,18 @@ end
 --     end
 -- end
 
-local ws = http.websocket 'wss://t.alb1.hu/ws?turtleId=1&worldId=crea&dimensionId=overworld'
-ws.close()
-local ok, res = pcall(function() ws.receive() end, debug.traceback)
-log(res)
+-- local ws = http.websocket 'wss://t.alb1.hu/ws?turtleId=1&worldId=crea&dimensionId=overworld'
+-- ws.close()
+-- local ok, res = pcall(function() ws.receive() end, debug.traceback)
+-- log(res)
+
+local function benchmark(f, count)
+    local start = os.epoch'utc'
+    for i = 1, count do
+        f()
+    end
+    local finish = os.epoch'utc'
+    print('took', (finish - start) / 1000, 'seconds')
+end
+
+benchmark(os.epoch)

@@ -29,7 +29,6 @@ function M.httpRequest(request)
 
     local event, url, response, errorResponse = coroutine.yield('', request.url)
     if event == 'http_success' then
-        log('event:', event, 'url:', url, 'response:', response)
         return true, response
     elseif event == 'http_failure' then
         return false, response, errorResponse

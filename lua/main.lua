@@ -10,6 +10,7 @@ local ok, err = xpcall(function()
     local log = require'log'
     local move = require'moveGps'
     local rotationHelper = require'rotationHelper'
+    local status = require'status'
     local world = require'worldHm'
 
     local worldId = file.read'worldId.txt'
@@ -21,16 +22,17 @@ local ok, err = xpcall(function()
     local position = Vec.new{x, y, z}
     local rotation = rotationHelper.getRotation(position)
 
-    hivemind.init(turtleId, worldId, dimensionId, jobs.update)
-    move.init(position, rotation)
-
     log('worldId', worldId)
     log('dimensionId', dimensionId)
     log('turtleId', turtleId)
     log('position', position)
     log('rotation', rotation)
 
-    eventLoop.run(hivemind.run, world.run, jobs.run)
+    hivemind.init(turtleId, worldId, dimensionId, jobs.update)
+    status.init(hivemind.send)
+    move.init(position, rotation)
+
+    eventLoop.run(hivemind.run, world.run, jobs.run, status.run)
 end, debug.traceback)
 
 if not ok then

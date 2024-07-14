@@ -3,7 +3,7 @@ using System.Text.Json.Nodes;
 
 namespace Hivemind;
 
-public class TurtleMessageHandler(TurtleService turtleService, BlockRepository blockRepository)
+public class TurtleMessageHandler(TurtleService turtleService)
 {
     public Turtle Turtle { private get; set; } = null!;
 
@@ -22,10 +22,20 @@ public class TurtleMessageHandler(TurtleService turtleService, BlockRepository b
     {
         switch (type)
         {
+            case "status":
+                TurtleStatusMessage message = data.Deserialize<TurtleStatusMessage>(JsonOptions) ?? throw new InvalidOperationException();
+                Turtle.CurrentJob = message.CurrentJob;
+                Turtle.NextJob = message.NextJob;
+                Turtle.FuelLevel = message.FuelLevel;
+                Turtle.FuelLimit = message.FuelLimit;
+                Turtle.Position = message.Position;
+                turtleService.SendChanged();
+                return;
         }
 
         throw new NotSupportedException("Unknown message type " + type);
     }
 
+    private record TurtleStatusMessage(string? CurrentJob, string? NextJob, int FuelLevel, int FuelLimit, Coordinates Position);
 }
 

@@ -10,6 +10,8 @@ public class TurtleService(IServiceProvider serviceProvider) : IHostedService
 
     public event Action? OnChanged;
 
+    public void SendChanged() => OnChanged?.Invoke();
+
     public async Task Register(string worldId, byte dimensionId, uint turtleId, WebSocket webSocket,
         TaskCompletionSource tcs)
     {

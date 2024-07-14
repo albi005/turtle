@@ -1,3 +1,4 @@
+require'queue'
 local log = require'log'
 
 local M = {}
@@ -33,20 +34,42 @@ local function getEvents()
     end
 end
 
-function M.run(...)
-    local tasks = {}
-
-    for _, f in ipairs{...} do
-        table.insert(tasks, {
-            coroutine = coroutine.create(f),
-            wait = nil,
-        })
+local queue = Queue.new()
+--Dequeues an item from the event queue. Returns nil if the queue is empty and shouldWait is false
+local function tryDequeueEvent(shouldWait)
+    for _, value in ipairs(getEvents()) do
+        queue:push(value)
     end
 
-    local waitCount = 0
+    if not queue:empty() then
+        return queue:pop()
+    end
+
+    if shouldWait then
+        return {os.pullEvent()}
+    end
+
+    return nil
+end
+
+function M.run(...)
+    local tasks = {}
+    local taskToIndex = {}
+
+    for i, f in ipairs{...} do
+        local task = {
+            coroutine = coroutine.create(f),
+            wait = nil,
+        }
+        table.insert(tasks, task)
+        taskToIndex[task] = i
+    end
+
     local waitIds = {}
 
     while true do
+        local waitCount = 0
+
         -- run ready tasks
         for _, task in ipairs(tasks) do
             if not task.wait then
@@ -77,31 +100,29 @@ function M.run(...)
                         error'invalid wait'
                     end
                 end
+            else
+                waitCount = waitCount + 1
             end
         end
 
-        local events = getEvents()
-
-        for _, event in ipairs(events) do
+        local event = tryDequeueEvent(waitCount == #tasks)
+        if event then
             local eventName = event[1]
-            log('event: ', eventName)
 
             local waitId = event[2]
             if waitId then
-            local task = waitIds[waitId]
-            if task then
-                task.wait = nil
-                task.event = event
-                waitCount = waitCount - 1
-                waitIds[waitId] = nil
+                local task = waitIds[waitId]
+                if task then
+                    task.wait = nil
+                    task.event = event
+                    waitIds[waitId] = nil
+                end
             end
-        end
 
             for _, task in ipairs(tasks) do
                 if task.wait and task.wait[eventName] then
                     task.wait = nil
                     task.event = event
-                    waitCount = waitCount - 1
                 end
             end
         end

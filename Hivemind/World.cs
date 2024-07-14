@@ -7,6 +7,10 @@ public record Turtle(uint Id, World World, Dimension Dimension)
     public TurtleConnection? Connection { get; set; }
     public Dimension Dimension { get; set; } = Dimension;
     public Coordinates? Position { get; set; }
+    public int? FuelLevel { get; set; }
+    public int? FuelLimit { get; set; }
+    public string? CurrentJob { get; set; }
+    public string? NextJob { get; set; }
 }
 
 public record World(string Name)

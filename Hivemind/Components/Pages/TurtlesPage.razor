@@ -1,15 +1,15 @@
 ﻿@page "/turtles"
-@using System.Net.WebSockets
-@using System.Text
 @inject TurtleService TurtleService
 @rendermode InteractiveServer
+@implements IDisposable
 
 <PageTitle>Hivemind</PageTitle>
 
-<h1>Turtles</h1>
+<h1>Hivemind</h1>
 
 @foreach (var world in TurtleService.Worlds.Values)
 {
+    <h2>@world.Name</h2>
     @foreach (var turtle in world.Turtles.Values)
     {
         <p>
@@ -21,40 +21,48 @@
                 var pos = turtle.Position.Value;
                 <span>@pos.X, @pos.Y, @pos.Z</span>
             }
-            @turtle.Dimension?.Name
-            <MudButtonGroup Color="Color.Dark" Variant="Variant.Filled" Class="ma-2">
-                <MudButton OnClick="@(() => turtle.Connection?.SendAsync("left")!)">
-                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowLeft"></MudIcon>
-                </MudButton>
-                <MudButton OnClick="@(() => turtle.Connection?.SendAsync("up")!)">
-                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowUp"></MudIcon>
-                </MudButton>
-                <MudButton OnClick="@(() => turtle.Connection?.SendAsync("down")!)">
-                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"></MudIcon>
-                </MudButton>
-                <MudButton OnClick="@(() => turtle.Connection?.SendAsync("right")!)">
-                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowRight"></MudIcon>
-                </MudButton>
+
+            @(" ") @turtle.Dimension?.Name
+            @(" ") <b>@turtle.FuelLevel</b>/@turtle.FuelLimit
+        </p>
+        <p>
+            <MudButtonGroup Variant="Variant.Filled" Class="ma-2" OverrideStyles="false">
+                @foreach (string job in _jobs)
+                {
+                    <MudButton
+                        Variant="Variant.Filled"
+                        Color="@GetButtonColor(job, turtle)"
+                        OnClick="@(() => turtle.Connection.SendAsync(job)!)">
+                        @job
+                    </MudButton>
+                }
             </MudButtonGroup>
 
-            @foreach (string job in _jobs)
-            {
-                <MudButton OnClick="@(() => turtle.Connection.SendAsync(job)!)">
-                    @job
-                </MudButton>
-            }
         </p>
     }
 }
 
 @code {
 
-    private static string[] _jobs = ["mine", "reboot"];
+    private static string[] _jobs = ["north", "east", "south", "west", "up", "down", "mine", "reboot", "lava"];
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        TurtleService.OnChanged += () => InvokeAsync(StateHasChanged);
+        TurtleService.OnChanged += Update;
     }
+
+    private void Update() => InvokeAsync(StateHasChanged);
+
+    private Color GetButtonColor(string job, Turtle turtle)
+    {
+        return job == turtle.CurrentJob
+            ? Color.Success
+            : job == turtle.NextJob
+                ? Color.Primary
+                : Color.Dark;
+    }
+
+    void IDisposable.Dispose() => TurtleService.OnChanged -= Update;
 
 }

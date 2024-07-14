@@ -32,7 +32,7 @@ end
 local function getNextMove(col, row)
     log('col ', col, 'row ', row)
     local evenRow = row % 2 == 0
-    if (evenRow and col >= COL_COUNT) or (not evenRow and col == 1) then
+    if (evenRow and col >= COL_COUNT) or (not evenRow and col == 0) then
         return moveNextRow
     end
     if evenRow then

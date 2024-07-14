@@ -1,6 +1,6 @@
 local world = require'worldHm'
-local log = require'log'
 local Vec = require'vec'
+local status = require'status'
 
 local M = {}
 
@@ -41,8 +41,8 @@ M.rotToMove = {
 }
 
 local function updateWorldForward()
-    log('updateWorldForward, rotation', M.rotation)
     world.update(M.position + M.rotToMove[M.rotation], turtle.inspect())
+
 end
 local function updateWorldUp()
     world.update(M.position + M.up, turtle.inspectUp())
@@ -106,6 +106,11 @@ M.north.dig = dig(M.north)
 M.up.dig = dig(M.up, turtle.digUp)
 M.down.dig = dig(M.down, turtle.digDown)
 
+local function updatePosition(move)
+    M.position = M.position + move
+    status.updatePosition(M.position:toVector())
+end
+
 local function executeHorizontalMove(move)
     return function()
         if not (math.abs(move.rot - M.rotation) == 2 and turtle.back()) then
@@ -120,11 +125,11 @@ local function executeHorizontalMove(move)
                     end
                 until didMove
             end
-            M.position = M.position + move
+            updatePosition(move)
             updateWorldAll()
         else
             -- executed turtle.back() shortcut
-            M.position = M.position + move
+            updatePosition(move)
             updateWorldAtPosition()
             updateWorldUp()
             updateWorldDown()
@@ -141,7 +146,7 @@ M.up.move = function()
     if not turtle.up() then
         return false
     end
-    M.position = M.position + M.up
+    updatePosition(M.up)
     updateWorldAtPosition()
     updateWorldUp()
     updateWorldForward()
@@ -152,7 +157,7 @@ M.down.move = function()
     if not turtle.down() then
         return false
     end
-    M.position = M.position + M.down
+    updatePosition(M.down)
     updateWorldAtPosition()
     updateWorldDown()
     updateWorldForward()
@@ -191,7 +196,7 @@ M.getLeft = getDir(3)
 
 function M.init(position, rotation)
     M.position = position
-    log('rotation = ', rotation)
+    status.updatePosition(M.position:toVector())
     M.rotation = rotation
     updateWorldAll()
 end
