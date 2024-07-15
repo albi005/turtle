@@ -6,6 +6,7 @@ namespace Hivemind;
 public class TurtleConnection
 {
     private readonly WebSocket _webSocket;
+    private readonly TaskCompletionSource _tcs;
     private readonly Turtle _turtle;
     private readonly IServiceProvider _serviceProvider;
 
@@ -14,21 +15,32 @@ public class TurtleConnection
     {
         _turtle = turtle;
         _webSocket = webSocket;
+        _tcs = tcs;
         _serviceProvider = serviceProvider;
         Task.Run(Run);
     }
 
     public async Task SendAsync(string message)
     {
-        await _webSocket.SendAsync(Encoding.UTF8.GetBytes(message), WebSocketMessageType.Text, true,
-            CancellationToken.None);
+        try
+        {
+            await _webSocket.SendAsync(Encoding.UTF8.GetBytes(message), WebSocketMessageType.Text, true,
+                CancellationToken.None);
+        }
+        catch (WebSocketException) { Close(); }
+    }
+
+    public void Close()
+    {
+        _turtle.Connection = null;
+        _tcs.SetResult();
     }
 
     private async Task Run()
     {
         byte[] buffer = new byte[1024];
         WebSocketReceiveResult? receiveResult;
-        do
+        while (true)
         {
             MemoryStream messageStream = new();
             do
@@ -37,14 +49,15 @@ public class TurtleConnection
                 messageStream.Write(buffer, 0, receiveResult.Count);
             } while (!receiveResult.EndOfMessage);
 
-            if (receiveResult.CloseStatus.HasValue) break;
+            if (receiveResult.CloseStatus.HasValue)
+                break;
             await using var scope = _serviceProvider.CreateAsyncScope();
             var messageHandler = scope.ServiceProvider.GetRequiredService<TurtleMessageHandler>();
             messageHandler.Turtle = _turtle;
             await messageHandler.Handle(messageStream);
-        } while (true);
+        }
 
-        _turtle.Connection = null;
+        Close();
 
         await _webSocket.CloseAsync(
             receiveResult.CloseStatus.Value,

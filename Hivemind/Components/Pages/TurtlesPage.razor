@@ -30,9 +30,10 @@
                 @foreach (string job in _jobs)
                 {
                     <MudButton
+                        Disabled="@(turtle.Connection == null)"
                         Variant="Variant.Filled"
                         Color="@GetButtonColor(job, turtle)"
-                        OnClick="@(() => turtle.Connection.SendAsync(job)!)">
+                        OnClick="@(() => turtle.Connection?.SendAsync(job)!)">
                         @job
                     </MudButton>
                 }

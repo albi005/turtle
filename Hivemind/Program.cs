@@ -34,6 +34,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStaticFiles();
+app.MapGet("/", () => Results.File("/home/albi/src/turtle/lua/install.lua", "text/plain"));
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider("/home/albi/src/turtle/lua"),
@@ -47,34 +48,12 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 app.MapControllers();
 
-// app.MapGet("/",
-//     // async ctx => TypedResults.PhysicalFile("/home/albi/src/turtle/install.lua", "text/plain"));
-//     async ctx => TypedResults.PhysicalFile("app.css", "text/plain"));
-
-
-// app.Use(async (context, next) =>
-// {
-//     bool turtle = context.Request.Headers.UserAgent.FirstOrDefault()?.Contains("computercraft") ?? false;
-//     // Do work that can write to the Response.
-//     await next.Invoke();
-//     // Do logging or other work that doesn't write to the Response.
-// });
-
 await using (var startupScope = app.Services.CreateAsyncScope())
 {
     await startupScope.ServiceProvider.GetRequiredService<Db>().Database.MigrateAsync();
 }
 
 app.Run();
-
-public class IndexController : ControllerBase
-{
-    [HttpGet("/")]
-    public PhysicalFileResult Get()
-    {
-        return PhysicalFile("/home/albi/src/turtle/lua/install.lua", "text/plain");
-    }
-}
 
 public class WebSocketController(TurtleService turtleService) : ControllerBase
 {

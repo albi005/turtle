@@ -4,7 +4,18 @@ namespace Hivemind;
 
 public record Turtle(uint Id, World World, Dimension Dimension)
 {
-    public TurtleConnection? Connection { get; set; }
+    private TurtleConnection? _connection;
+
+    public TurtleConnection? Connection
+    {
+        get => _connection;
+        set
+        {
+            _connection?.Close();
+            _connection = value;
+        }
+    }
+
     public Dimension Dimension { get; set; } = Dimension;
     public Coordinates? Position { get; set; }
     public int? FuelLevel { get; set; }
