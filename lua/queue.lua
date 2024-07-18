@@ -1,7 +1,8 @@
+---@class Queue
 Queue = {}
 Queue.__index = Queue
 
-function Queue.new()
+function Queue:new()
     local instance = {first = 0, last = -1}
     setmetatable(instance, Queue)
     return instance

@@ -1,5 +1,45 @@
 require'queue'
-local move = require'move'
+local move = require'moveGps'
+local inventory = require'inventory'
+local hivemind = require'hivemind'
+local world = require'worldHm'
+local config = require'config'
+local Vec = require'vec'
+local VecStore = require'vecStore'
+local log = require'log'
+local path = require'path'
+
+local M = {}
+
+local moveForward ---@type Move -- as compared to the starting direction
+local moveBackward ---@type Move
+local moveRight ---@type Move
+local moveLeft ---@type Move
+local firstBlock ---@type Vec -- base + fw + down, first block in the pool
+---@type {basePos: Vec, direction: integer}
+local state = {}
+
+local function saveState()
+    config.save('lava', {
+        basePos = Vec:new(state.basePos),
+        direction = state.direction,
+    })
+end
+
+local function loadState()
+    state = config.load'lava' or {
+        basePos = move.position,
+        direction = move.rotation,
+    }
+    state.basePos = Vec:new(state.basePos)
+    moveForward = move.rotToMove[state.direction]
+    moveBackward = move.rotToMove[(state.direction + 2) % 4]
+    moveRight = move.rotToMove[(state.direction + 1) % 4]
+    moveLeft = move.rotToMove[(state.direction + 3) % 4]
+    firstBlock = state.basePos + moveForward + move.down
+    saveState()
+    log('loaded state', state)
+end
 
 local function assertInventoryEmpty()
     for i = 1, 16 do
@@ -15,91 +55,108 @@ local function assertOnlyLava()
     end
 end
 
--- TODO: simplify getClosestLava
-local function getClosestLava()
-    local queue = Queue.new()
-    queue:push(move.getPos())
+local dirs = {
+    move.down,
+    move.east,
+    move.south,
+    move.west,
+    move.north,
+    move.up
+}
 
-    local visited = {}
+---@return Vec
+local function getClosestTarget(start, prevMoves)
+    local queue = Queue:new()
+    queue:push(start)
+
+    local maxY = firstBlock[2] ---@type integer
 
     while not queue:empty() do
-        local current = queue:pop()
+        local current = queue:pop() ---@type Vec
 
-        for _, nextMove in pairs(move.moves) do
-            local next = current + nextMove
-            if not visited[next] then
-                visited[next] = true
-                if World[next] == BlockTypes.empty then -- only check around air/flowing lava
+        for _, nextMove in ipairs(dirs) do
+            local next = current + nextMove ---@type Vec
+            if next[2] <= maxY and not prevMoves:get(next) then
+                prevMoves:set(next, nextMove)
+
+                local nextBlock = world.get(next)
+                if nextBlock == nil or nextBlock == 'minecraft:lava' then
+                    return next                -- found an unknown block or lava, return its coordinates
+                elseif nextBlock == 'air' then -- only check around air/flowing lava
                     queue:push(next)
-                elseif World[next] == BlockTypes.lava then
-                    return current, nextMove.place
                 end
             end
         end
     end
+
+    error'Ran out of lava'
 end
 
-local function getNextUnknown()
-    local queue = Queue.new()
-    queue:push(move.getPos())
+local function getTasks()
+    local start = move.position
+    local prevMoves = VecStore:new()
+    local target = getClosestTarget(start, prevMoves)
 
-    local visited = {}
+    local reversed = {} ---@type Move[]
+    local curr = target
+    while curr ~= start do
+        local prevMove = prevMoves:get(curr)
+        table.insert(reversed, prevMove)
+        curr = curr + prevMove.inv
+    end
 
-    while not queue:empty() do
-        local current = queue:pop()
+    local tasks = {} ---@type function[]
+    local n = #reversed
+    for i = n, 1, -1 do
+        table.insert(tasks, reversed[i].move)
+    end
 
-        for _, nextMove in pairs(move.moves) do
-            local next = current + nextMove
-            if not visited[next] and next[2] < 0 then
-                visited[next] = true
-                if World[next] == BlockTypes.empty then -- only check around air/flowing lava
-                    queue:push(next)
-                elseif World[next] == nil then
-                    return current, nextMove.rot
-                end
+    local targetType = world.get(target)
+    if targetType == 'minecraft:lava' then
+        log('n', n, 'place')
+        tasks[n] = reversed[1].place
+    else
+        log('n', n, 'inspect')
+        tasks[n] = reversed[1].inspect
+    end
+
+    return tasks
+end
+
+function M.run()
+    loadState()
+    world.upload()
+    log('firstBlock', firstBlock)
+    world.downloadLavaPool(firstBlock)
+
+    if world.get(firstBlock) == nil then
+        log('firstBlock unknown')
+        moveForward.move()
+    end
+
+    while true do
+        while inventory.containsBuckets() do
+            local tasks = getTasks()
+            for _, task in ipairs(tasks) do
+                task()
+                coroutine.yield()
             end
         end
+
+        path.goTo(state.basePos)
+        moveRight.move()
+        move.turnToRot(state.direction + 2)
+        inventory.dropAllExcept()
+        moveLeft.move()
+        move.turnToRot(state.direction + 2)
+        inventory.ensureBuckets()
+        moveForward.move()
+        move.down.move()
     end
 end
 
-local function run()
-    Inventory.dropAll()
-    Inventory.pickUp()
-
-    move.east()
-    move.down()
-
-    local count = 0
-    while count < 16 do
-        local prev, place = getClosestLava()
-        if prev then
-            print('Next lava at ' .. prev[1] .. ' ' .. prev[2] .. ' ' .. prev[3])
-            move.goTo(prev)
-            place()
-            count = count + 1
-        else
-            local prev, rot = getNextUnknown()
-            assert(prev, 'Lava lake empty')
-            print('Next unknown at ' .. prev[1] .. ' ' .. prev[2] .. ' ' .. prev[3])
-            move.goTo(prev)
-            if rot then
-                move.turnToRot(rot)
-            end
-        end
-    end
-
-    Inventory.dropAll()
+function M.stop()
+    --TODO: lava.stop()
 end
 
-        -- TODO: MOVE TO LAVA.LUA:
-        -- move.goTo(state.base)
-        -- move.turnToRot(state.direction + 2)
-        -- inventory.dropAllExcept'buckets'
-        -- move.getLeft().move()
-        -- move.turnToRot(state.direction + 2)
-        -- local buckets = inventory.ensureBuckets()
-
-        -- for _ = 1, buckets do
-            
-        -- end
-return {run = run}
+return M

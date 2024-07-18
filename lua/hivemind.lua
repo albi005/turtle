@@ -80,9 +80,12 @@ function M.send(type, data)
     end
 end
 
-local function httpRequest(path, data)
+local function httpRequest(method, path, data)
     local url = 'https://t.alb1.hu' .. path
-    local body = textutils.serialiseJSON(data)
+    local body
+    if data ~= nil then
+        body = textutils.serialiseJSON(data)
+    end
 
     for i = 1, 5 do
         -- ensure the server is up and knows about the turtle
@@ -91,7 +94,7 @@ local function httpRequest(path, data)
         end
 
         local ok, responseOrError, errResponse = async.httpRequest{
-            method = 'POST',
+            method = method,
             url = url,
             body = body,
             headers = {
@@ -114,10 +117,11 @@ local function httpRequest(path, data)
             return res
         end
 
-        log('http request failed: ', responseOrError, ', response: ', errResponse)
+        log('http request failed:', responseOrError, '\n response:', errResponse)
+        log('retrying in', i ^ 2, 's')
         async.sleep(i ^ 2)
     end
-    error'http request failed'
+    error'http request failed after 5 retries'
 end
 
 ---@param start {x: integer, y: integer, z: integer}
@@ -126,15 +130,22 @@ end
 function M.getPath(start, target)
     assert(start.x and start.y and start.z, 'invalid start: ' .. textutils.serialise(start))
     assert(target.x and target.y and target.z, 'invalid target: ' .. textutils.serialise(target))
-    local moves = httpRequest('/path', {start = start, ['end'] = target}) -- (list of string) or nil
-    log('getPath:', textutils.serialise(moves))
+    local moves = httpRequest('POST', '/path', {start = start, ['end'] = target}) -- (list of string) or nil
     return moves
+end
+
+function M.getLavaPool(x, y, z)
+    local path = ('/lavaPool?x=%d&y=%d&z=%d'):format(x, y, z)
+    log('path', path)
+    local blocks = httpRequest('GET', path)
+    ---@cast blocks {coordinates: Vec, id: string}[]
+    return blocks
 end
 
 ---@param updates {coordinates: {x: integer, y: integer, z: integer}, id: string, lastUpdate: integer}[]
 function M.updateWorld(updates)
     if #updates == 0 then return end
-    httpRequest('/updateWorld', updates)
+    httpRequest('POST', '/updateWorld', updates)
 end
 
 return M

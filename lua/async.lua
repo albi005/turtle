@@ -33,7 +33,6 @@ function M.httpRequest(request)
     elseif event == 'http_failure' then
         return false, response, errorResponse
     end
-    
 end
 
 return M

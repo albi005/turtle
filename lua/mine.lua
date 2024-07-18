@@ -17,7 +17,7 @@ local moveNextRow
 local state = {basePos = {0, 0, 0}, resumePos = {0, 0, 0}, direction = 0}
 
 local function check(mov)
-    log('checking ', Vec.new(move.position) + mov)
+    log('checking ', Vec:new(move.position) + mov)
     local block = world.get(move.position + mov)
     if block ~= 'air' then
         for _, target in ipairs(TARGETS) do
@@ -43,8 +43,8 @@ end
 
 local function saveState()
     config.save('mine', {
-        basePos = Vec.new(state.basePos),
-        resumePos = Vec.new(state.resumePos),
+        basePos = Vec:new(state.basePos),
+        resumePos = Vec:new(state.resumePos),
         direction = state.direction
     })
 end
@@ -77,8 +77,8 @@ function M.run()
         state.resumePos = move.position
         saveState()
     end
-    state.basePos = Vec.new(state.basePos)
-    state.resumePos = Vec.new(state.resumePos)
+    state.basePos = Vec:new(state.basePos)
+    state.resumePos = Vec:new(state.resumePos)
     moveForward = move.rotToMove[state.direction]
     moveBackward = move.rotToMove[(state.direction + 2) % 4]
     moveNextRow = move.rotToMove[(state.direction + 1) % 4]

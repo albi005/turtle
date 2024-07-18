@@ -3,12 +3,16 @@ local async = require'async'
 local M = {}
 
 function M.ensureBuckets()
-    M.dropAll()
+    M.dropAllExcept()
     turtle.select(1)
     repeat
         local gotAny = turtle.suck(16 - turtle.getItemCount(1))
         async.sleep(1)
     until not gotAny or turtle.getItemCount(1) == 16
+end
+
+function M.containsBuckets()
+    return M.getItemCount'minecraft:bucket' > 0
 end
 
 function M.dropAllExcept(except)

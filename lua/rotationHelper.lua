@@ -3,17 +3,17 @@ local Vec = require'vec'
 local rotationHelper = {}
 
 local deltaToRotation = {
-    [Vec.new{1, 0, 0}] = 0,
-    [Vec.new{0, 0, 1}] = 1,
-    [Vec.new{-1, 0, 0}] = 2,
-    [Vec.new{0, 0, -1}] = 3
+    [Vec:new{1, 0, 0}] = 0,
+    [Vec:new{0, 0, 1}] = 1,
+    [Vec:new{-1, 0, 0}] = 2,
+    [Vec:new{0, 0, -1}] = 3
 }
 
 function rotationHelper.getRotation(startPosition)
     if turtle.getFuelLevel() < 100 then error'No fuel' end
     for tries = 0, 3 do
         if turtle.forward() then
-            local pos = Vec.new{gps.locate()}
+            local pos = Vec:new{gps.locate()}
             local delta = pos - startPosition
             local rotation
             for k, v in pairs(deltaToRotation) do
@@ -34,8 +34,10 @@ function rotationHelper.getRotation(startPosition)
 
     -- blocked on all sides
     turtle.dig()
-    turtle.forward()
-    local pos = Vec.new{gps.locate()}
+    if not turtle.forward() then
+        error"couldn't determine position"
+    end
+    local pos = Vec:new{gps.locate()}
     local delta = pos - startPosition
     for k, r in pairs(deltaToRotation) do
         if k == delta then

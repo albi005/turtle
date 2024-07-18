@@ -4,15 +4,32 @@ local status = require'status'
 
 local M = {}
 
-M.position = {0, 0, 0} -- current turtle position
-M.rotation = 0         -- current turtle rotation
+---@class Move : Vec
+---@field id string
+---@field inv Move
+---@field rot integer?
+---@field dig function
+---@field move function
+---@field place function
+---@field inspect function
+local Move = {}
 
-M.east = Vec.new{1, 0, 0}
-M.south = Vec.new{0, 0, 1}
-M.west = Vec.new{-1, 0, 0}
-M.north = Vec.new{0, 0, -1}
-M.up = Vec.new{0, 1, 0}
-M.down = Vec.new{0, -1, 0}
+---@param vec [integer, integer, integer]
+---@return Move
+function Move:new(vec)
+    ---@cast Vec Move
+    return Vec:new(vec)
+end
+
+M.position = Vec:new{0, 0, 0} ---@type Vec -- current turtle position
+M.rotation = 0 ---@type integer        -- current turtle rotation
+
+M.east = Move:new{1, 0, 0} ---@type Move
+M.south = Move:new{0, 0, 1}
+M.west = Move:new{-1, 0, 0}
+M.north = Move:new{0, 0, -1}
+M.up = Move:new{0, 1, 0}
+M.down = Move:new{0, -1, 0}
 
 M.east.id = 'east'
 M.south.id = 'south'
@@ -42,7 +59,6 @@ M.rotToMove = {
 
 local function updateWorldForward()
     world.update(M.position + M.rotToMove[M.rotation], turtle.inspect())
-
 end
 local function updateWorldUp()
     world.update(M.position + M.up, turtle.inspectUp())
@@ -183,6 +199,19 @@ M.down.place = function()
     turtle.placeDown()
     updateWorldDown()
 end
+
+local function inspect(move)
+    return function()
+        M.turnToRot(move.rot)
+    end
+end
+M.east.inspect = inspect(M.east)
+M.south.inspect = inspect(M.south)
+M.west.inspect = inspect(M.west)
+M.north.inspect = inspect(M.north)
+local function nop() end
+M.up.inspect = nop
+M.down.inspect = nop
 
 local function getDir(rotationDelta)
     return function()

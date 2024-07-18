@@ -9,7 +9,7 @@ local status = require'status'
 local M = {}
 
 local jobs = {
-    -- lava = require'lava',
+    lava = require'lava',
     mine = require'mine',
     standBy = {
         run = function() coroutine.yield(events.new_job) end,

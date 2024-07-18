@@ -19,7 +19,7 @@ local ok, err = xpcall(function()
     os.setComputerLabel(tostring(turtleId))
     local x, y, z = gps.locate()
     if not x then error'No gps' end
-    local position = Vec.new{x, y, z}
+    local position = Vec:new{x, y, z}
     local rotation = rotationHelper.getRotation(position)
 
     log('worldId', worldId)
@@ -28,6 +28,7 @@ local ok, err = xpcall(function()
     log('position', position)
     log('rotation', rotation)
 
+    world.init(dimensionId)
     hivemind.init(turtleId, worldId, dimensionId, jobs.update)
     status.init(hivemind.send)
     move.init(position, rotation)

@@ -2,17 +2,20 @@ local log = require'log'
 
 -- array stored in tables per dimension
 
-local Store = {}
+---@class VecStore
+local VecStore = {}
 
-function Store:new()
-    log('Store:new')
+---@return VecStore
+function VecStore:new()
     local store = {d = {}}
     setmetatable(store, self)
     self.__index = self
     return store
 end
 
-function Store:set(vec, value)
+---@param vec Vec
+---@param value any
+function VecStore:set(vec, value)
     local x, y, z = vec[1], vec[2], vec[3]
     local d = self.d
     d[x] = d[x] or {}
@@ -20,7 +23,9 @@ function Store:set(vec, value)
     d[x][y][z] = value
 end
 
-function Store:get(vec)
+---@param vec Vec
+---@return any
+function VecStore:get(vec)
     local x, y, z = vec[1], vec[2], vec[3]
     local d = self.d
     if d[x] and d[x][y] and d[x][y][z] then
@@ -29,11 +34,11 @@ function Store:get(vec)
     return nil
 end
 
-function Store:clear()
+function VecStore:clear()
     self.d = {}
 end
 
-function Store:forEach(f)
+function VecStore:forEach(f)
     for x, yz in pairs(self.d) do
         for y, zv in pairs(yz) do
             for z, v in pairs(zv) do
@@ -43,4 +48,4 @@ function Store:forEach(f)
     end
 end
 
-return Store
+return VecStore

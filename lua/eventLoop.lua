@@ -34,7 +34,7 @@ local function getEvents()
     end
 end
 
-local queue = Queue.new()
+local queue = Queue:new()
 --Dequeues an item from the event queue. Returns nil if the queue is empty and shouldWait is false
 local function tryDequeueEvent(shouldWait)
     for _, value in ipairs(getEvents()) do

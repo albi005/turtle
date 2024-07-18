@@ -6,9 +6,10 @@ local log = require'log'
 
 local M = {}
 
----@param target integer[]
+---@param target Vec
 function M.goTo(target)
     world.upload()
+    if move.position == target then return end
     local moves = hivemind.getPath(move.position:toVector(), target:toVector())
     log('moves:', moves)
     if not moves then
